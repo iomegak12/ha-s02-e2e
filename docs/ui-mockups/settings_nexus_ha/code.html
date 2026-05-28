@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nexus HA - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#dce2f3",
+                        "tertiary-container": "#5e6061",
+                        "primary-container": "#4f46e5",
+                        "status-verified": "#6366F1",
+                        "outline": "#777587",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#151c27",
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface-container": "#e7eefe",
+                        "error": "#ba1a1a",
+                        "surface-bg": "#F3F4F6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#454748",
+                        "on-secondary": "#ffffff",
+                        "surface-card": "#FFFFFF",
+                        "tertiary-fixed-dim": "#c5c7c8",
+                        "surface-bright": "#f9f9ff",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-variant": "#dce2f3",
+                        "tertiary-fixed": "#e1e3e4",
+                        "secondary-container": "#39b8fd",
+                        "outline-variant": "#c7c4d8",
+                        "secondary": "#006591",
+                        "on-tertiary-fixed": "#191c1d",
+                        "primary-fixed": "#e2dfff",
+                        "surface": "#f9f9ff",
+                        "status-active": "#10B981",
+                        "on-tertiary-container": "#dadbdc",
+                        "on-primary-fixed": "#0f0069",
+                        "inverse-primary": "#c3c0ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#e2e8f8",
+                        "surface-dim": "#d3daea",
+                        "background": "#f9f9ff",
+                        "tertiary": "#46494a",
+                        "on-primary-container": "#dad7ff",
+                        "status-error": "#EF4444",
+                        "inverse-surface": "#2a313d",
+                        "inverse-on-surface": "#ebf1ff",
+                        "secondary-fixed-dim": "#89ceff",
+                        "on-surface": "#151c27",
+                        "secondary-fixed": "#c9e6ff",
+                        "status-pending": "#F59E0B",
+                        "on-secondary-fixed": "#001e2f",
+                        "on-secondary-container": "#004666",
+                        "surface-tint": "#4d44e3",
+                        "primary": "#3525cd",
+                        "status-archived": "#374151",
+                        "on-secondary-fixed-variant": "#004c6e",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-surface-variant": "#464555",
+                        "primary-fixed-dim": "#c3c0ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "12px",
+                        "gutter-grid": "16px",
+                        "sidebar-width": "240px",
+                        "stack-lg": "24px",
+                        "stack-sm": "4px",
+                        "padding-card": "20px",
+                        "margin-page": "24px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Roboto"],
+                        "code-mono": ["JetBrains Mono"],
+                        "label-bold": ["Roboto"],
+                        "headline-md": ["Roboto"],
+                        "display-lg": ["Roboto"],
+                        "body-base": ["Roboto"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "code-mono": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "label-bold": ["12px", { "lineHeight": "16px", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "display-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-base": ["12px", { "lineHeight": "18px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface-bg font-body-base text-body-base text-on-surface antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="hidden md:flex bg-surface-container-lowest w-[240px] h-screen sticky top-0 left-0 bg-surface-container-low shadow-sm flex-col py-stack-lg transition-colors duration-200 ease-in-out z-50">
+<div class="px-gutter-grid mb-stack-lg">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Nexus HA</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Clinical Admin</p>
+</div>
+<nav class="flex-1 flex flex-col gap-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="home">home</span>
+<span class="font-label-bold text-label-bold">Home</span>
+</a>
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span class="font-label-bold text-label-bold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="person">person</span>
+<span class="font-label-bold text-label-bold">Patients</span>
+</a>
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="medical_services">medical_services</span>
+<span class="font-label-bold text-label-bold">Doctors</span>
+</a>
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="location_city">location_city</span>
+<span class="font-label-bold text-label-bold">Branches</span>
+</a>
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="history_edu">history_edu</span>
+<span class="font-label-bold text-label-bold">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="newspaper">newspaper</span>
+<span class="font-label-bold text-label-bold">News</span>
+</a>
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="description">description</span>
+<span class="font-label-bold text-label-bold">Terms</span>
+</a>
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span class="font-label-bold text-label-bold">Support</span>
+</a>
+<a class="flex items-center gap-3 px-gutter-grid py-2 text-primary font-bold border-r-4 border-primary bg-surface-container-low transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px] icon-filled" data-icon="settings">settings</span>
+<span class="font-label-bold text-label-bold">Settings</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar (Mobile Only) -->
+<header class="md:hidden bg-surface w-full h-16 sticky top-0 z-40 bg-surface border-b border-outline-variant flex justify-between items-center px-gutter-grid transition-all duration-150">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-black text-primary">Nexus HA</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<img alt="Administrator Profile" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDU-tB8Lnzgi1oSh5VyXePoTx4DYsjWynIacwd-TlNLvY7bcTmM0C7t7iWKg4Tr7UbLZ9zRZ5XuO1ssz3wna3G9kz60RlrT9_ykcgNx2KuEMHN_kmdGhdfix8s1kJ0uZ5IZD0uyyCDEybF1kjLhvSFVU31H3sIQBcmdr7-xvLH2iTg7f9AqeUhlxozRnoDvr4VxyXUY3dV15IbZr2k8Ats-0oV--Gj5J-eSxYRyh8yLxmiFIG3bQvv0XIYFvwQjUB2qSXUvlFfu_u9A"/>
+</div>
+</header>
+<!-- TopNavBar (Desktop - Contextual Header for Settings) -->
+<header class="hidden md:flex bg-surface w-full h-16 border-b border-outline-variant justify-between items-center px-margin-page transition-all duration-150 z-30 shrink-0">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-md text-headline-md text-on-surface font-medium">Settings &amp; Configuration</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]" data-icon="search">search</span>
+<input class="pl-9 pr-4 py-1.5 bg-surface-container-lowest border border-outline-variant rounded-full font-body-base text-body-base focus:border-primary focus:ring-1 focus:ring-primary outline-none w-64 transition-all" placeholder="Search settings..." type="text"/>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<img alt="Administrator Profile" class="w-8 h-8 rounded-full border border-outline-variant cursor-pointer hover:ring-2 ring-primary transition-all" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzo_tVpX2WYzjsIjA_USFhR5-rNOVH27Pq-Z1kCVp07GTnHhj9oG7Pdluh-zVIGvDcwf23N1ZPdJKZ05qpvAvWnr-za3PSp8YoCVK2bImsgXlbGwX4zLSZ2XTIVaUig-llhiQP4_9xNygKA5_Yom_OyJLDxMYfoJ-qslR0n7TWFkgGlvx2LFdrGgd2VS36G-r1mXP_LZ1i-xrlJ2QvsBZX9alFqHI-YjZ-hw3MJcwE5emXUUeviHOv3mTnkb16kbWmV9OF8VqqoHk3"/>
+</div>
+</header>
+<!-- Main Scrollable Canvas -->
+<main class="flex-1 overflow-y-auto p-margin-page bg-surface-bg">
+<div class="max-w-[1200px] mx-auto flex flex-col gap-stack-lg">
+<!-- Tabs -->
+<div class="flex border-b border-outline-variant gap-8">
+<button class="py-2 border-b-2 border-primary text-primary font-label-bold text-label-bold">System Settings</button>
+<button class="py-2 border-b-2 border-transparent text-on-surface-variant hover:text-primary transition-colors font-label-bold text-label-bold">User Preferences</button>
+<button class="py-2 border-b-2 border-transparent text-on-surface-variant hover:text-primary transition-colors font-label-bold text-label-bold">Security &amp; Audit</button>
+</div>
+<!-- Bento Grid Layout for Settings -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter-grid">
+<!-- Global Configuration Card (Col 8) -->
+<div class="lg:col-span-8 bg-surface-card rounded border border-outline-variant/30 p-padding-card shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+<div class="flex items-center justify-between border-b border-outline-variant/50 pb-stack-md mb-stack-md">
+<div>
+<h3 class="font-headline-md text-headline-md font-medium text-on-surface">Global Platform Configuration</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Manage core clinical system parameters and defaults.</p>
+</div>
+<span class="material-symbols-outlined text-primary" data-icon="tune">tune</span>
+</div>
+<div class="space-y-stack-lg mt-stack-lg">
+<!-- Form Field Row 1 -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter-grid">
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface mb-1">Default Timezone</label>
+<select class="w-full border border-outline-variant rounded bg-surface-container-lowest px-3 py-2 font-body-base text-body-base focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>UTC (Coordinated Universal Time)</option>
+<option>EST (Eastern Standard Time)</option>
+<option>PST (Pacific Standard Time)</option>
+</select>
+</div>
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface mb-1">Clinical Date Format</label>
+<select class="w-full border border-outline-variant rounded bg-surface-container-lowest px-3 py-2 font-body-base text-body-base focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>YYYY-MM-DD (ISO 8601)</option>
+<option>DD/MM/YYYY</option>
+<option>MM/DD/YYYY</option>
+</select>
+</div>
+</div>
+<!-- Form Field Row 2 -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter-grid">
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface mb-1">Session Timeout (Minutes)</label>
+<input class="w-full border border-outline-variant rounded bg-surface-container-lowest px-3 py-2 font-body-base text-body-base focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="number" value="15"/>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Auto-logout duration for inactivity.</p>
+</div>
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface mb-1">Max Data Export Rows</label>
+<input class="w-full border border-outline-variant rounded bg-surface-container-lowest px-3 py-2 font-body-base text-body-base focus:border-primary focus:ring-1 focus:ring-primary outline-none" type="number" value="10000"/>
+</div>
+</div>
+<div class="flex justify-end gap-3 pt-stack-md border-t border-outline-variant/50">
+<button class="px-4 py-1.5 border border-primary text-primary rounded font-label-bold text-label-bold hover:bg-surface-container-low transition-colors">Reset</button>
+<button class="px-4 py-1.5 bg-primary text-on-primary rounded font-label-bold text-label-bold hover:bg-primary-fixed-variant transition-colors">Save Changes</button>
+</div>
+</div>
+</div>
+<!-- Notification Triggers (Col 4) -->
+<div class="lg:col-span-4 bg-surface-card rounded border border-outline-variant/30 p-padding-card shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col">
+<div class="flex items-center justify-between border-b border-outline-variant/50 pb-stack-md mb-stack-md">
+<h3 class="font-headline-md text-headline-md font-medium text-on-surface">Notification Triggers</h3>
+<span class="material-symbols-outlined text-primary" data-icon="notifications_active">notifications_active</span>
+</div>
+<div class="flex-1 space-y-4">
+<label class="flex items-center justify-between p-3 border border-outline-variant/40 rounded hover:bg-surface-container-low transition-colors cursor-pointer">
+<div>
+<span class="block font-label-bold text-label-bold text-on-surface">Critical Alerts</span>
+<span class="block font-body-sm text-body-sm text-on-surface-variant">System outages, security breaches</span>
+</div>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-primary appearance-none cursor-pointer translate-x-5 transition-transform" id="toggle1" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-primary cursor-pointer" for="toggle1"></label>
+</div>
+</label>
+<label class="flex items-center justify-between p-3 border border-outline-variant/40 rounded hover:bg-surface-container-low transition-colors cursor-pointer">
+<div>
+<span class="block font-label-bold text-label-bold text-on-surface">Audit Summary</span>
+<span class="block font-body-sm text-body-sm text-on-surface-variant">Daily digest of log activities</span>
+</div>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-outline-variant appearance-none cursor-pointer transition-transform" id="toggle2" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-surface-variant cursor-pointer" for="toggle2"></label>
+</div>
+</label>
+<label class="flex items-center justify-between p-3 border border-outline-variant/40 rounded hover:bg-surface-container-low transition-colors cursor-pointer">
+<div>
+<span class="block font-label-bold text-label-bold text-on-surface">New Doctor Onboarding</span>
+<span class="block font-body-sm text-body-sm text-on-surface-variant">Email alerts for profile completion</span>
+</div>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-primary appearance-none cursor-pointer translate-x-5 transition-transform" id="toggle3" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-primary cursor-pointer" for="toggle3"></label>
+</div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

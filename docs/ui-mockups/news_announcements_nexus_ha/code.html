@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nexus HA - News &amp; Announcements</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#dce2f3",
+                        "tertiary-container": "#5e6061",
+                        "primary-container": "#4f46e5",
+                        "status-verified": "#6366F1",
+                        "outline": "#777587",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#151c27",
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface-container": "#e7eefe",
+                        "error": "#ba1a1a",
+                        "surface-bg": "#F3F4F6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#454748",
+                        "on-secondary": "#ffffff",
+                        "surface-card": "#FFFFFF",
+                        "tertiary-fixed-dim": "#c5c7c8",
+                        "surface-bright": "#f9f9ff",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-variant": "#dce2f3",
+                        "tertiary-fixed": "#e1e3e4",
+                        "secondary-container": "#39b8fd",
+                        "outline-variant": "#c7c4d8",
+                        "secondary": "#006591",
+                        "on-tertiary-fixed": "#191c1d",
+                        "primary-fixed": "#e2dfff",
+                        "surface": "#f9f9ff",
+                        "status-active": "#10B981",
+                        "on-tertiary-container": "#dadbdc",
+                        "on-primary-fixed": "#0f0069",
+                        "inverse-primary": "#c3c0ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#e2e8f8",
+                        "surface-dim": "#d3daea",
+                        "background": "#f9f9ff",
+                        "tertiary": "#46494a",
+                        "on-primary-container": "#dad7ff",
+                        "status-error": "#EF4444",
+                        "inverse-surface": "#2a313d",
+                        "inverse-on-surface": "#ebf1ff",
+                        "secondary-fixed-dim": "#89ceff",
+                        "on-surface": "#151c27",
+                        "secondary-fixed": "#c9e6ff",
+                        "status-pending": "#F59E0B",
+                        "on-secondary-fixed": "#001e2f",
+                        "on-secondary-container": "#004666",
+                        "surface-tint": "#4d44e3",
+                        "primary": "#3525cd",
+                        "status-archived": "#374151",
+                        "on-secondary-fixed-variant": "#004c6e",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-surface-variant": "#464555",
+                        "primary-fixed-dim": "#c3c0ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "12px",
+                        "gutter-grid": "16px",
+                        "sidebar-width": "240px",
+                        "stack-lg": "24px",
+                        "stack-sm": "4px",
+                        "padding-card": "20px",
+                        "margin-page": "24px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Roboto"],
+                        "code-mono": ["JetBrains Mono"],
+                        "label-bold": ["Roboto"],
+                        "headline-md": ["Roboto"],
+                        "display-lg": ["Roboto"],
+                        "body-base": ["Roboto"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "code-mono": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "label-bold": ["12px", { "lineHeight": "16px", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "display-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-base": ["12px", { "lineHeight": "18px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for a cleaner clinical look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dce2f3;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c7c4d8;
+        }
+    </style>
+</head>
+<body class="bg-surface-bg text-on-surface font-body-base text-body-base h-screen w-full flex overflow-hidden">
+<!-- Shared Component: SideNavBar -->
+<nav class="hidden md:flex flex-col h-full py-stack-lg bg-surface-container-lowest dark:bg-inverse-surface w-[240px] h-screen sticky top-0 left-0 bg-surface-container-low dark:bg-surface-container-high shadow-sm shrink-0 z-50">
+<div class="px-gutter-grid mb-stack-lg">
+<div class="flex items-center gap-stack-md">
+<div class="w-8 h-8 rounded-DEFAULT bg-primary flex items-center justify-center text-on-primary font-bold">N</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">Nexus HA</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Clinical Admin</p>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto px-3">
+<ul class="flex flex-col gap-1">
+<!-- Home -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-surface-variant/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">home</span>
+<span class="font-body-base text-body-base">Home</span>
+</a>
+</li>
+<!-- Dashboard -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-surface-variant/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-body-base text-body-base">Dashboard</span>
+</a>
+</li>
+<!-- Patients -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-surface-variant/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">person</span>
+<span class="font-body-base text-body-base">Patients</span>
+</a>
+</li>
+<!-- Doctors -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-surface-variant/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">medical_services</span>
+<span class="font-body-base text-body-base">Doctors</span>
+</a>
+</li>
+<!-- Branches -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-surface-variant/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">location_city</span>
+<span class="font-body-base text-body-base">Branches</span>
+</a>
+</li>
+<!-- Audit Logs -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-surface-variant/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">history_edu</span>
+<span class="font-body-base text-body-base">Audit Logs</span>
+</a>
+</li>
+<!-- News (ACTIVE) -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-primary dark:text-inverse-primary font-bold border-r-4 border-primary bg-primary/5 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px] fill">newspaper</span>
+<span class="font-body-base text-body-base">News</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="px-3 mt-auto pt-stack-lg border-t border-outline-variant/30">
+<ul class="flex flex-col gap-1">
+<!-- Terms -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-surface-variant/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span class="font-body-base text-body-base">Terms</span>
+</a>
+</li>
+<!-- Support -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-surface-variant/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="font-body-base text-body-base">Support</span>
+</a>
+</li>
+<!-- Settings -->
+<li>
+<a class="flex items-center gap-3 px-3 py-2 rounded-DEFAULT text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-surface-variant/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-body-base text-body-base">Settings</span>
+</a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<div class="flex-1 flex flex-col h-full overflow-hidden bg-surface-bg relative">
+<!-- Shared Component: TopNavBar -->
+<header class="w-full h-16 sticky top-0 z-40 bg-surface dark:bg-on-background border-b border-outline-variant flex justify-between items-center px-gutter-grid transition-all duration-150 shrink-0">
+<div class="flex items-center gap-stack-md md:hidden">
+<button class="text-on-surface-variant p-2 rounded-DEFAULT hover:bg-surface-container-high">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="font-headline-md text-headline-md font-black text-primary dark:text-primary-fixed">Nexus HA</span>
+</div>
+<div class="hidden md:flex flex-1 max-w-md">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+<input class="w-full h-9 pl-9 pr-3 rounded-DEFAULT border border-outline-variant bg-surface-container-lowest text-body-base font-body-base focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-outline/70" placeholder="Search across clinical data..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-stack-md ml-auto">
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-primary dark:hover:text-primary-fixed cursor-pointer transition-all duration-150 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-primary dark:hover:text-primary-fixed cursor-pointer transition-all duration-150">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant ml-2 cursor-pointer">
+<img alt="Administrator Profile" class="w-full h-full object-cover" data-alt="Close up professional headshot of a female healthcare administrator in a bright, modern clinical setting. Soft, diffuse lighting highlights her features. The background is a slightly out of focus bright hospital corridor with cool, white light tones. High-end corporate photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkDkxiOKGK7jfmpjOp8WdS9rWm6w_ux8pYXjR2ZZbPLZJDLhL0h0VA_qI1IffVe8VOH6RFlEK7xXK-dXXSe6yuwqCyoLq9CnVIp7UYLWwQWWKPIgUIvj5PO9-xcVRG4xQEvPbezdgaiM0MfZ9WKZRBxIKG4XrA4YMZ9zWENIKxzlSUdfWlOc32mLTX67cyMOpHGShyQrN37TqoL1dvuC6iPYVCfaEmJlyJh4Ztdnc6enmZyA3nkK2ncDHDWBRaz5TYHzC8iLfjF6d0"/>
+</div>
+</div>
+</header>
+<!-- Scrollable Content Area -->
+<main class="flex-1 overflow-y-auto p-gutter-grid md:p-margin-page">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-stack-md mb-stack-lg">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-surface mb-1">News &amp; Announcements</h2>
+<p class="font-body-base text-body-base text-on-surface-variant">Manage hospital-wide updates, clinical protocols, and system alerts.</p>
+</div>
+<button class="flex items-center justify-center gap-2 bg-primary text-on-primary px-4 py-2.5 rounded-DEFAULT font-label-bold text-label-bold hover:bg-primary-fixed-variant transition-colors shadow-sm whitespace-nowrap w-full md:w-auto">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Create Announcement
+                </button>
+</div>
+<!-- Controls / Filters -->
+<div class="bg-surface-card rounded-lg border border-outline-variant p-stack-md flex flex-col sm:flex-row items-center justify-between gap-stack-md mb-stack-lg shadow-sm">
+<div class="flex items-center gap-2 w-full sm:w-auto">
+<span class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-[10px]">Filter By Category:</span>
+<select class="border-none bg-surface-container-low text-on-surface text-body-base font-body-base rounded py-1.5 pl-3 pr-8 focus:ring-1 focus:ring-primary outline-none cursor-pointer">
+<option>All Categories</option>
+<option>Clinical Updates</option>
+<option>Administrative</option>
+<option>System Alerts</option>
+</select>
+</div>
+<div class="flex items-center gap-2 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-outline-variant pt-2 sm:pt-0 sm:pl-4">
+<button class="flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-body-base font-body-base">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+                        More Filters
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Content Feed -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-gutter-grid">
+<!-- Featured / High Priority Announcement (Spans 2 columns on large screens) -->
+<article class="col-span-1 md:col-span-2 bg-surface-card rounded-xl border border-error-container p-padding-card shadow-sm flex flex-col relative overflow-hidden group hover:border-error transition-colors">
+<div class="absolute top-0 left-0 w-1 h-full bg-error"></div>
+<div class="flex items-start justify-between mb-stack-md">
+<span class="bg-error-container text-on-error-container px-2 py-0.5 rounded font-label-bold text-[10px] uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] fill">warning</span>
+                            Critical Clinical Protocol
+                        </span>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<h3 class="font-headline-md text-[22px] font-bold text-on-surface mb-2 group-hover:text-primary transition-colors cursor-pointer">Revised Infection Control Measures for Ward B</h3>
+<p class="font-body-base text-body-base text-on-surface-variant mb-stack-lg max-w-3xl line-clamp-2">
+                        Effective immediately, all staff entering Ward B must adhere to the updated Level 3 PPE protocols. This includes mandatory N95 fit testing verification prior to shift commencement and enhanced sterilization procedures for mobile diagnostic equipment. Please review the attached documentation thoroughly.
+                    </p>
+<div class="mt-auto flex items-center justify-between border-t border-outline-variant/30 pt-stack-md">
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded-full bg-surface-container-high flex items-center justify-center text-[10px] font-bold text-primary">DR</div>
+<div class="flex flex-col">
+<span class="font-body-base text-[11px] font-medium text-on-surface">Dr. Sarah Jenkins</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">Chief Medical Officer</span>
+</div>
+</div>
+<span class="font-code-mono text-code-mono text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                            Today, 08:30 AM
+                        </span>
+</div>
+</article>
+<!-- Standard Announcement Card (Administrative) -->
+<article class="bg-surface-card rounded-xl border border-outline-variant p-padding-card shadow-sm flex flex-col hover:border-primary-fixed-dim transition-colors">
+<div class="flex items-start justify-between mb-stack-md">
+<span class="bg-surface-container-high text-on-surface px-2 py-0.5 rounded font-label-bold text-[10px] uppercase tracking-wider">
+                            Administrative
+                        </span>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</div>
+<h3 class="font-headline-md text-headline-md font-bold text-on-surface mb-2 cursor-pointer hover:text-primary transition-colors line-clamp-2">Q3 Financial Townhall: Registration Now Open</h3>
+<p class="font-body-base text-body-base text-on-surface-variant mb-stack-lg line-clamp-3">
+                        Join the executive team for the Q3 financial review and strategic outlook session. The townhall will be held in the main auditorium and broadcasted live via the internal portal. Please register your attendance by Friday to ensure adequate catering.
+                    </p>
+<div class="mt-auto flex items-center justify-between border-t border-outline-variant/30 pt-stack-md">
+<span class="font-body-base text-[11px] text-on-surface-variant">HR &amp; Comms Dept</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">Oct 12, 2023</span>
+</div>
+</article>
+<!-- Standard Announcement Card (System) -->
+<article class="bg-surface-card rounded-xl border border-outline-variant p-padding-card shadow-sm flex flex-col hover:border-secondary transition-colors">
+<div class="flex items-start justify-between mb-stack-md">
+<span class="bg-secondary-fixed text-on-secondary-fixed px-2 py-0.5 rounded font-label-bold text-[10px] uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">dns</span>
+                            System Alert
+                        </span>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</div>
+<h3 class="font-headline-md text-headline-md font-bold text-on-surface mb-2 cursor-pointer hover:text-primary transition-colors line-clamp-2">Scheduled EHR Maintenance Downtime</h3>
+<p class="font-body-base text-body-base text-on-surface-variant mb-stack-lg line-clamp-3">
+                        The Electronic Health Records (EHR) system will undergo scheduled maintenance this Sunday from 02:00 AM to 04:00 AM EST. The system will be completely unavailable during this window. Clinical staff should prepare offline charting protocols for admitted patients.
+                    </p>
+<div class="mt-auto flex items-center justify-between border-t border-outline-variant/30 pt-stack-md">
+<span class="font-body-base text-[11px] text-on-surface-variant">IT Operations</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">Oct 10, 2023</span>
+</div>
+</article>
+<!-- Standard Announcement Card (Clinical) -->
+<article class="bg-surface-card rounded-xl border border-outline-variant p-padding-card shadow-sm flex flex-col hover:border-primary-fixed-dim transition-colors">
+<div class="flex items-start justify-between mb-stack-md">
+<span class="bg-surface-container-high text-on-surface px-2 py-0.5 rounded font-label-bold text-[10px] uppercase tracking-wider">
+                            Clinical Updates
+                        </span>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</div>
+<h3 class="font-headline-md text-headline-md font-bold text-on-surface mb-2 cursor-pointer hover:text-primary transition-colors line-clamp-2">New Pharmacy Formulary Integration Live</h3>
+<p class="font-body-base text-body-base text-on-surface-variant mb-stack-lg line-clamp-3">
+                        The updated Q4 formulary has been successfully integrated into the prescribing module. Several high-tier antibiotics now require secondary authorization. Review the attached cheat sheet for quick reference during rounds.
+                    </p>
+<div class="mt-auto flex items-center justify-between border-t border-outline-variant/30 pt-stack-md">
+<span class="font-body-base text-[11px] text-on-surface-variant">Pharmacy Dept</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">Oct 08, 2023</span>
+</div>
+</article>
+<!-- Standard Announcement Card (Administrative) -->
+<article class="bg-surface-card rounded-xl border border-outline-variant p-padding-card shadow-sm flex flex-col hover:border-primary-fixed-dim transition-colors">
+<div class="flex items-start justify-between mb-stack-md">
+<span class="bg-surface-container-high text-on-surface px-2 py-0.5 rounded font-label-bold text-[10px] uppercase tracking-wider">
+                            Administrative
+                        </span>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</div>
+<h3 class="font-headline-md text-headline-md font-bold text-on-surface mb-2 cursor-pointer hover:text-primary transition-colors line-clamp-2">Holiday Schedule 2024 Finalized</h3>
+<p class="font-body-base text-body-base text-on-surface-variant mb-stack-lg line-clamp-3">
+                        The official hospital holiday schedule for the upcoming year has been approved by the board. Please note the shift in observed dates for mid-week federal holidays to assist with block scheduling. Shift bidding will open next Monday.
+                    </p>
+<div class="mt-auto flex items-center justify-between border-t border-outline-variant/30 pt-stack-md">
+<span class="font-body-base text-[11px] text-on-surface-variant">Human Resources</span>
+<span class="font-code-mono text-code-mono text-on-surface-variant">Oct 05, 2023</span>
+</div>
+</article>
+</div>
+<!-- Pagination/Load More (Simplified for aesthetic) -->
+<div class="mt-stack-lg flex justify-center pb-stack-lg">
+<button class="px-6 py-2 border border-outline-variant rounded-DEFAULT text-on-surface font-label-bold hover:bg-surface-container-low transition-colors">
+                    Load More Announcements
+                </button>
+</div>
+</main>
+</div>
+</body></html>

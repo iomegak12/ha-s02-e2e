@@ -1,0 +1,290 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nexus HA — Branches Service API",
+    "version": "1.0.0",
+    "summary": "Branch master data for the Nexus HA platform.",
+    "description": "Owns the Branch reference data used by Patients and Doctors services to validate branch associations at write time. There are no cross-database foreign keys; this service is the single source of truth for branches.",
+    "contact": { "name": "Nexus HA Engineering", "email": "engineering@nexusha.local" },
+    "license": { "name": "Proprietary" }
+  },
+  "servers": [
+    { "url": "http://localhost:5004", "description": "Local development (placeholder port)" },
+    { "url": "https://dev.api.nexusha.local/branches", "description": "Dev environment" },
+    { "url": "https://api.nexusha.local/branches", "description": "Production" }
+  ],
+  "tags": [
+    { "name": "Branches", "description": "CRUD operations on branch master data." }
+  ],
+  "security": [ { "bearerAuth": [] } ],
+  "paths": {
+    "/api/v1/branches": {
+      "get": {
+        "tags": ["Branches"],
+        "operationId": "listBranches",
+        "summary": "List branches",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/SizeParam" },
+          { "$ref": "#/components/parameters/SortParam" },
+          { "name": "isActive", "in": "query", "schema": { "type": "boolean" }, "description": "Filter by active flag." },
+          { "name": "city", "in": "query", "schema": { "type": "string" }, "description": "Case-insensitive city filter." }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged list of branches.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedBranch" },
+                "example": {
+                  "page": 1, "size": 20, "totalCount": 2,
+                  "items": [
+                    { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f60", "code": "BLR", "name": "Bengaluru Main", "city": "Bengaluru", "isActive": true, "createdAtUtc": "2026-04-01T10:00:00Z" },
+                    { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f61", "code": "DEL", "name": "Delhi NCR", "city": "New Delhi", "isActive": true, "createdAtUtc": "2026-04-03T11:30:00Z" }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      },
+      "post": {
+        "tags": ["Branches"],
+        "operationId": "createBranch",
+        "summary": "Create a new branch",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BranchCreate" },
+              "example": { "code": "MUM", "name": "Mumbai Andheri", "city": "Mumbai", "isActive": true }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Branch created.",
+            "headers": {
+              "Location": { "schema": { "type": "string" }, "description": "URI of the created branch." }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Branch" },
+                "example": { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f62", "code": "MUM", "name": "Mumbai Andheri", "city": "Mumbai", "isActive": true, "createdAtUtc": "2026-05-27T09:00:00Z" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "409": {
+            "description": "Duplicate branch code.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" },
+                "example": {
+                  "type": "https://errors.nexusha.local/duplicate-branch-code",
+                  "title": "Conflict",
+                  "status": 409,
+                  "code": "BRANCH_CODE_DUPLICATE",
+                  "detail": "A branch with code 'MUM' already exists.",
+                  "instance": "/api/v1/branches",
+                  "traceId": "00-1f8b2c3d4e5f60718293a4b5c6d7e8f9-a1b2c3d4e5f60718-01"
+                }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/Validation422" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      }
+    },
+    "/api/v1/branches/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get": {
+        "tags": ["Branches"],
+        "operationId": "getBranchById",
+        "summary": "Get branch by id",
+        "responses": {
+          "200": {
+            "description": "Branch found.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Branch" },
+                "example": { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f60", "code": "BLR", "name": "Bengaluru Main", "city": "Bengaluru", "isActive": true, "createdAtUtc": "2026-04-01T10:00:00Z" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      },
+      "patch": {
+        "tags": ["Branches"],
+        "operationId": "patchBranch",
+        "summary": "Partially update a branch",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdempotencyKeyHeader" },
+          { "$ref": "#/components/parameters/IfMatchETag" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BranchPatch" },
+              "example": { "name": "Bengaluru Whitefield", "isActive": true }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Branch updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Branch" },
+                "example": { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f60", "code": "BLR", "name": "Bengaluru Whitefield", "city": "Bengaluru", "isActive": true, "createdAtUtc": "2026-04-01T10:00:00Z" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": { "$ref": "#/components/responses/Conflict409ETag" },
+          "422": { "$ref": "#/components/responses/Validation422" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      },
+      "delete": {
+        "tags": ["Branches"],
+        "operationId": "deactivateBranch",
+        "summary": "Soft-delete (deactivate) a branch by setting isActive=false",
+        "description": "Branches are never physically deleted; the operation flips `isActive` to false. Associations from Patients/Doctors are preserved.",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "204": { "description": "Branch deactivated." },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT", "description": "JWT (RS256) issued by the Identity service. Validated locally via JWKS." }
+    },
+    "parameters": {
+      "PageParam": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 }, "description": "1-based page number." },
+      "SizeParam": { "name": "size", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }, "description": "Page size (max 100)." },
+      "SortParam": { "name": "sort", "in": "query", "schema": { "type": "string" }, "description": "Sort expression, e.g. `createdAtUtc:desc`." },
+      "IdempotencyKeyHeader": { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" }, "description": "Client-supplied key to de-duplicate retried writes." },
+      "IfMatchETag": { "name": "If-Match", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Optimistic concurrency token (RowVersion / ETag)." },
+      "IdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Branch identifier (GUID)." }
+    },
+    "responses": {
+      "BadRequest400": {
+        "description": "Malformed request.",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/bad-request", "title": "Bad Request", "status": 400, "code": "BAD_REQUEST", "detail": "Request body could not be parsed.", "instance": "/api/v1/branches", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+      },
+      "Unauthorized401": {
+        "description": "Missing or invalid bearer token.",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Unauthorized", "status": 401, "code": "UNAUTHENTICATED", "detail": "Bearer token is missing or invalid.", "instance": "/api/v1/branches", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+      },
+      "Forbidden403": {
+        "description": "Authenticated but not permitted.",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Forbidden", "status": 403, "code": "UNAUTHORIZED", "detail": "Admin role required.", "instance": "/api/v1/branches", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+      },
+      "NotFound404": {
+        "description": "Resource not found.",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/not-found", "title": "Not Found", "status": 404, "code": "NOT_FOUND", "detail": "Branch was not found.", "instance": "/api/v1/branches/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f60", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+      },
+      "Conflict409ETag": {
+        "description": "Concurrency conflict (RowVersion / ETag mismatch).",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/concurrency", "title": "Conflict", "status": 409, "code": "CONCURRENCY_CONFLICT", "detail": "The branch was modified by another request.", "instance": "/api/v1/branches/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f60", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+      },
+      "Validation422": {
+        "description": "Validation failed.",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/validation", "title": "Validation failed", "status": 422, "code": "BRANCH_VALIDATION", "detail": "One or more fields are invalid.", "instance": "/api/v1/branches", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "code", "message": "Code must be 2-5 uppercase letters." } ] } } }
+      },
+      "RateLimited429": {
+        "description": "Too many requests.",
+        "headers": { "Retry-After": { "schema": { "type": "integer" }, "description": "Seconds to wait before retrying." } },
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/rate-limited", "title": "Too Many Requests", "status": 429, "code": "RATE_LIMITED", "detail": "Request rate exceeded.", "instance": "/api/v1/branches", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+      }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "description": "RFC 9457 Problem Details with Nexus HA extensions (`code`, `traceId`, `errors[]`).",
+        "properties": {
+          "type": { "type": "string", "format": "uri" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "instance": { "type": "string" },
+          "code": { "type": "string", "description": "Stable machine-readable error code." },
+          "traceId": { "type": "string", "description": "W3C trace id for cross-referencing logs/traces." },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": { "field": { "type": "string" }, "message": { "type": "string" } },
+              "required": ["field", "message"]
+            }
+          }
+        },
+        "required": ["type", "title", "status"]
+      },
+      "Branch": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "code": { "type": "string", "minLength": 2, "maxLength": 5, "pattern": "^[A-Z]{2,5}$" },
+          "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "city": { "type": "string", "minLength": 2, "maxLength": 80 },
+          "isActive": { "type": "boolean" },
+          "createdAtUtc": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "code", "name", "city", "isActive", "createdAtUtc"]
+      },
+      "BranchCreate": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "pattern": "^[A-Z]{2,5}$" },
+          "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "city": { "type": "string", "minLength": 2, "maxLength": 80 },
+          "isActive": { "type": "boolean", "default": true }
+        },
+        "required": ["code", "name", "city"]
+      },
+      "BranchPatch": {
+        "type": "object",
+        "description": "All fields optional; only supplied fields are updated. `code` is immutable.",
+        "properties": {
+          "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "city": { "type": "string", "minLength": 2, "maxLength": 80 },
+          "isActive": { "type": "boolean" }
+        }
+      },
+      "PagedBranch": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "size": { "type": "integer" },
+          "totalCount": { "type": "integer" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Branch" } }
+        },
+        "required": ["page", "size", "totalCount", "items"]
+      }
+    }
+  }
+}

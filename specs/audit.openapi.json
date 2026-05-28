@@ -1,0 +1,246 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nexus HA — Audit Service API",
+    "version": "1.0.0",
+    "summary": "Append-only audit ledger for administrative actions across Nexus HA.",
+    "description": "Persists immutable audit entries produced by Patients, Doctors, Branches, and Identity services. All writes require an `Idempotency-Key`. Reads are paged and filterable.",
+    "contact": { "name": "Nexus HA Engineering", "email": "engineering@nexusha.local" },
+    "license": { "name": "Proprietary" }
+  },
+  "servers": [
+    { "url": "http://localhost:5005", "description": "Local development (placeholder port)" },
+    { "url": "https://dev.api.nexusha.local/audit", "description": "Dev environment" },
+    { "url": "https://api.nexusha.local/audit", "description": "Production" }
+  ],
+  "tags": [ { "name": "Audit", "description": "Audit ledger entries." } ],
+  "security": [ { "bearerAuth": [] } ],
+  "paths": {
+    "/api/v1/audit": {
+      "post": {
+        "tags": ["Audit"],
+        "operationId": "appendAuditEntry",
+        "summary": "Append an immutable audit entry",
+        "description": "Used by backend services (service-to-service) to record an action. Idempotent via `Idempotency-Key`.",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AuditEntryCreate" },
+              "example": {
+                "entityType": "Patient",
+                "entityId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70",
+                "entityCode": "PAT-2026-BLR-000012",
+                "action": "StatusChanged",
+                "actorId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f71",
+                "actorUsername": "asha.menon",
+                "occurredAtUtc": "2026-05-27T09:15:42Z",
+                "summary": "Patient activated.",
+                "before": { "status": "Draft" },
+                "after": { "status": "Active" },
+                "correlationId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Audit entry persisted.",
+            "headers": { "Location": { "schema": { "type": "string" } } },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuditEntry" },
+                "example": {
+                  "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f72",
+                  "entityType": "Patient",
+                  "entityId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70",
+                  "entityCode": "PAT-2026-BLR-000012",
+                  "action": "StatusChanged",
+                  "actorId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f71",
+                  "actorUsername": "asha.menon",
+                  "occurredAtUtc": "2026-05-27T09:15:42Z",
+                  "recordedAtUtc": "2026-05-27T09:15:43Z",
+                  "summary": "Patient activated.",
+                  "before": { "status": "Draft" },
+                  "after": { "status": "Active" },
+                  "correlationId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "422": { "$ref": "#/components/responses/Validation422" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      },
+      "get": {
+        "tags": ["Audit"],
+        "operationId": "queryAuditEntries",
+        "summary": "Query the audit ledger",
+        "parameters": [
+          { "name": "entityType", "in": "query", "schema": { "$ref": "#/components/schemas/EntityType" } },
+          { "name": "entityId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "entityCode", "in": "query", "schema": { "type": "string" } },
+          { "name": "action", "in": "query", "schema": { "$ref": "#/components/schemas/AuditAction" } },
+          { "name": "actorId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" }, "description": "Inclusive lower bound on `occurredAtUtc`." },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" }, "description": "Exclusive upper bound on `occurredAtUtc`." },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/SizeParam" },
+          { "$ref": "#/components/parameters/SortParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged audit entries.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedAuditEntry" },
+                "example": {
+                  "page": 1, "size": 20, "totalCount": 1,
+                  "items": [
+                    {
+                      "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f72",
+                      "entityType": "Patient",
+                      "entityId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70",
+                      "entityCode": "PAT-2026-BLR-000012",
+                      "action": "StatusChanged",
+                      "actorId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f71",
+                      "actorUsername": "asha.menon",
+                      "occurredAtUtc": "2026-05-27T09:15:42Z",
+                      "recordedAtUtc": "2026-05-27T09:15:43Z",
+                      "summary": "Patient activated.",
+                      "correlationId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "422": { "$ref": "#/components/responses/Validation422" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      }
+    },
+    "/api/v1/audit/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get": {
+        "tags": ["Audit"],
+        "operationId": "getAuditEntryById",
+        "summary": "Get a single audit entry",
+        "responses": {
+          "200": {
+            "description": "Entry found.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuditEntry" },
+                "example": {
+                  "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f72",
+                  "entityType": "Patient",
+                  "entityId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70",
+                  "entityCode": "PAT-2026-BLR-000012",
+                  "action": "StatusChanged",
+                  "actorId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f71",
+                  "actorUsername": "asha.menon",
+                  "occurredAtUtc": "2026-05-27T09:15:42Z",
+                  "recordedAtUtc": "2026-05-27T09:15:43Z",
+                  "summary": "Patient activated.",
+                  "before": { "status": "Draft" },
+                  "after": { "status": "Active" },
+                  "correlationId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "parameters": {
+      "PageParam": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+      "SizeParam": { "name": "size", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } },
+      "SortParam": { "name": "sort", "in": "query", "schema": { "type": "string" }, "description": "Sort expression, e.g. `occurredAtUtc:desc`." },
+      "IdempotencyKeyHeader": { "name": "Idempotency-Key", "in": "header", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Required for all audit writes." },
+      "IdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+    },
+    "responses": {
+      "BadRequest400": { "description": "Malformed request.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/bad-request", "title": "Bad Request", "status": 400, "code": "BAD_REQUEST", "detail": "Request body could not be parsed.", "instance": "/api/v1/audit", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Unauthorized401": { "description": "Missing or invalid bearer token.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Unauthorized", "status": 401, "code": "UNAUTHENTICATED", "detail": "Bearer token is missing or invalid.", "instance": "/api/v1/audit", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Forbidden403": { "description": "Authenticated but not permitted.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Forbidden", "status": 403, "code": "UNAUTHORIZED", "detail": "Admin role required.", "instance": "/api/v1/audit", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "NotFound404": { "description": "Audit entry not found.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/not-found", "title": "Not Found", "status": 404, "code": "NOT_FOUND", "detail": "Audit entry was not found.", "instance": "/api/v1/audit/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f72", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Validation422": { "description": "Validation failed.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/validation", "title": "Validation failed", "status": 422, "code": "AUDIT_VALIDATION", "detail": "One or more fields are invalid.", "instance": "/api/v1/audit", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "action", "message": "Must be one of: Created, Updated, StatusChanged, Purged." } ] } } } },
+      "RateLimited429": { "description": "Too many requests.", "headers": { "Retry-After": { "schema": { "type": "integer" } } }, "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/rate-limited", "title": "Too Many Requests", "status": 429, "code": "RATE_LIMITED", "detail": "Request rate exceeded.", "instance": "/api/v1/audit", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "description": "RFC 9457 Problem Details with Nexus HA extensions.",
+        "properties": {
+          "type": { "type": "string", "format": "uri" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "instance": { "type": "string" },
+          "code": { "type": "string" },
+          "traceId": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "object", "properties": { "field": { "type": "string" }, "message": { "type": "string" } }, "required": ["field", "message"] } }
+        },
+        "required": ["type", "title", "status"]
+      },
+      "EntityType": { "type": "string", "enum": ["Patient", "Doctor", "Branch", "Admin"] },
+      "AuditAction": { "type": "string", "enum": ["Created", "Updated", "StatusChanged", "Purged"] },
+      "AuditEntryCreate": {
+        "type": "object",
+        "properties": {
+          "entityType": { "$ref": "#/components/schemas/EntityType" },
+          "entityId": { "type": "string", "format": "uuid" },
+          "entityCode": { "type": "string", "description": "Public code, e.g. PAT-2026-BLR-000012." },
+          "action": { "$ref": "#/components/schemas/AuditAction" },
+          "actorId": { "type": "string", "format": "uuid" },
+          "actorUsername": { "type": "string" },
+          "occurredAtUtc": { "type": "string", "format": "date-time" },
+          "summary": { "type": "string", "maxLength": 500 },
+          "before": { "type": "object", "additionalProperties": true, "description": "Pre-image of changed fields (no PII)." },
+          "after": { "type": "object", "additionalProperties": true, "description": "Post-image of changed fields (no PII)." },
+          "correlationId": { "type": "string", "description": "W3C trace context id propagated from caller." }
+        },
+        "required": ["entityType", "entityId", "action", "actorId", "actorUsername", "occurredAtUtc", "summary"]
+      },
+      "AuditEntry": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AuditEntryCreate" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "recordedAtUtc": { "type": "string", "format": "date-time", "description": "Server-side persist time." }
+            },
+            "required": ["id", "recordedAtUtc"]
+          }
+        ]
+      },
+      "PagedAuditEntry": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "size": { "type": "integer" },
+          "totalCount": { "type": "integer" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/AuditEntry" } }
+        },
+        "required": ["page", "size", "totalCount", "items"]
+      }
+    }
+  }
+}

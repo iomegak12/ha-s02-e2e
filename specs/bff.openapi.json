@@ -1,0 +1,250 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nexus HA — BFF (Backend-for-Frontend) API",
+    "version": "1.0.0",
+    "summary": "Single entry point for the Nexus HA Admin Web App. Terminates browser sessions and proxies to backend microservices.",
+    "description": "The BFF (port 5006) is the only API the browser talks to. It owns user session cookies (HttpOnly + Secure + SameSite=Strict), translates them into service-to-service JWTs, and proxies requests 1:1 to the downstream services under their existing `/api/v1/...` paths.\n\n**Design note (LLD §13):** the proxied resource paths mirror the upstream specs exactly. To avoid duplicating thousands of lines of schemas, this document defines the session-handling endpoints in full and describes the proxied resources at the path level; for the full request/response/error schemas of proxied resources see the upstream OpenAPI specs:\n- Identity:  `identity.openapi.json`\n- Patients:  `patients.openapi.json`\n- Doctors:   `doctors.openapi.json`\n- Branches:  `branches.openapi.json`\n- Audit:     `audit.openapi.json`\n\nThe BFF adds three error responses on top of the upstream contract: `502 Bad Gateway`, `503 Service Unavailable`, `504 Gateway Timeout`.",
+    "contact": { "name": "Nexus HA Engineering", "email": "engineering@nexusha.local" },
+    "license": { "name": "Proprietary" }
+  },
+  "servers": [
+    { "url": "http://localhost:5006", "description": "Local development (placeholder port)" },
+    { "url": "https://dev.app.nexusha.local", "description": "Dev environment (admin web app origin)" },
+    { "url": "https://app.nexusha.local", "description": "Production (admin web app origin)" }
+  ],
+  "tags": [
+    { "name": "Session", "description": "Browser session login, refresh, logout (cookie-based)." },
+    { "name": "Me", "description": "Current session introspection." },
+    { "name": "Proxy:Identity", "description": "Admin management proxied to Identity service." },
+    { "name": "Proxy:Patients", "description": "Patient resources proxied to Patients service." },
+    { "name": "Proxy:Doctors", "description": "Doctor resources proxied to Doctors service." },
+    { "name": "Proxy:Branches", "description": "Branch resources proxied to Branches service." },
+    { "name": "Proxy:Audit", "description": "Audit ledger reads proxied to Audit service." }
+  ],
+  "security": [ { "sessionCookie": [] } ],
+  "paths": {
+    "/api/v1/session/login": {
+      "post": {
+        "tags": ["Session"], "operationId": "sessionLogin", "summary": "Exchange admin credentials for a session cookie",
+        "description": "Calls Identity `/auth/token` server-side, stores the resulting refresh token, and returns a single `Set-Cookie: nexus.sid=...; HttpOnly; Secure; SameSite=Strict; Path=/`.",
+        "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" }, "example": { "username": "asha.menon", "password": "S3cret!Pa55word" } } } },
+        "responses": {
+          "204": {
+            "description": "Session established. Cookie set.",
+            "headers": { "Set-Cookie": { "schema": { "type": "string" }, "example": "nexus.sid=v1.AbCdEf...; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=28800" } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": {
+            "description": "Invalid credentials.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/invalid-credentials", "title": "Unauthorized", "status": 401, "code": "INVALID_CREDENTIALS", "detail": "Username or password is incorrect.", "instance": "/api/v1/session/login", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+          },
+          "422": { "$ref": "#/components/responses/Validation422" },
+          "429": { "$ref": "#/components/responses/RateLimited429" },
+          "502": { "$ref": "#/components/responses/BadGateway502" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable503" },
+          "504": { "$ref": "#/components/responses/GatewayTimeout504" }
+        }
+      }
+    },
+    "/api/v1/session/refresh": {
+      "post": {
+        "tags": ["Session"], "operationId": "sessionRefresh", "summary": "Refresh the current session",
+        "description": "Rotates the access token server-side. Returns 204 and (optionally) refreshes the cookie expiry. No body.",
+        "responses": {
+          "204": { "description": "Session refreshed.", "headers": { "Set-Cookie": { "schema": { "type": "string" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "429": { "$ref": "#/components/responses/RateLimited429" },
+          "502": { "$ref": "#/components/responses/BadGateway502" },
+          "503": { "$ref": "#/components/responses/ServiceUnavailable503" },
+          "504": { "$ref": "#/components/responses/GatewayTimeout504" }
+        }
+      }
+    },
+    "/api/v1/session/logout": {
+      "post": {
+        "tags": ["Session"], "operationId": "sessionLogout", "summary": "Terminate the current session",
+        "description": "Calls Identity `/auth/revoke` server-side and clears the session cookie.",
+        "responses": {
+          "204": { "description": "Logged out (cookie cleared).", "headers": { "Set-Cookie": { "schema": { "type": "string" }, "example": "nexus.sid=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0" } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "tags": ["Me"], "operationId": "getCurrentUser", "summary": "Get the current authenticated admin",
+        "responses": {
+          "200": { "description": "Current user info.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Me" }, "example": { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "username": "asha.menon", "displayName": "Asha Menon", "role": "Admin", "sessionExpiresAtUtc": "2026-05-27T18:00:00Z" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }
+        }
+      }
+    },
+
+    "/api/v1/admins": {
+      "summary": "Proxied to Identity service. See identity.openapi.json for full schemas.",
+      "get": { "tags": ["Proxy:Identity"], "operationId": "proxyListAdmins", "summary": "Proxy: list admins", "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "429": { "$ref": "#/components/responses/RateLimited429" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "post": { "tags": ["Proxy:Identity"], "operationId": "proxyCreateAdmin", "summary": "Proxy: create admin", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "201": { "$ref": "#/components/responses/Proxied2xx" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "422": { "$ref": "#/components/responses/Validation422" }, "429": { "$ref": "#/components/responses/RateLimited429" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/admins/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get":    { "tags": ["Proxy:Identity"], "operationId": "proxyGetAdmin",      "summary": "Proxy: get admin",      "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "patch":  { "tags": ["Proxy:Identity"], "operationId": "proxyPatchAdmin",    "summary": "Proxy: patch admin",    "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" }, { "$ref": "#/components/parameters/IfMatchETag" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "delete": { "tags": ["Proxy:Identity"], "operationId": "proxyDeleteAdmin",   "summary": "Proxy: deactivate admin", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "204": { "description": "Deactivated." }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+
+    "/api/v1/branches": {
+      "summary": "Proxied to Branches service. See branches.openapi.json for full schemas.",
+      "get":  { "tags": ["Proxy:Branches"], "operationId": "proxyListBranches",   "summary": "Proxy: list branches",   "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "429": { "$ref": "#/components/responses/RateLimited429" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "post": { "tags": ["Proxy:Branches"], "operationId": "proxyCreateBranch",   "summary": "Proxy: create branch",   "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "201": { "$ref": "#/components/responses/Proxied2xx" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/branches/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get":    { "tags": ["Proxy:Branches"], "operationId": "proxyGetBranch",    "summary": "Proxy: get branch",    "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "patch":  { "tags": ["Proxy:Branches"], "operationId": "proxyPatchBranch",  "summary": "Proxy: patch branch",  "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" }, { "$ref": "#/components/parameters/IfMatchETag" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "delete": { "tags": ["Proxy:Branches"], "operationId": "proxyDeleteBranch", "summary": "Proxy: deactivate branch", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "204": { "description": "Deactivated." }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+
+    "/api/v1/patients": {
+      "summary": "Proxied to Patients service. See patients.openapi.json for full schemas.",
+      "get":  { "tags": ["Proxy:Patients"], "operationId": "proxyListPatients",   "summary": "Proxy: list patients",   "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "429": { "$ref": "#/components/responses/RateLimited429" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "post": { "tags": ["Proxy:Patients"], "operationId": "proxyCreatePatient",  "summary": "Proxy: create patient",  "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "201": { "$ref": "#/components/responses/Proxied2xx" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/patients/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get":   { "tags": ["Proxy:Patients"], "operationId": "proxyGetPatient",   "summary": "Proxy: get patient",   "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "patch": { "tags": ["Proxy:Patients"], "operationId": "proxyPatchPatient", "summary": "Proxy: patch patient", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" }, { "$ref": "#/components/parameters/IfMatchETag" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/patients/{id}/activate": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "post": { "tags": ["Proxy:Patients"], "operationId": "proxyActivatePatient", "summary": "Proxy: activate patient", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/patients/{id}/archive": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "post": { "tags": ["Proxy:Patients"], "operationId": "proxyArchivePatient", "summary": "Proxy: archive patient", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/patients/{id}/branches": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get":  { "tags": ["Proxy:Patients"], "operationId": "proxyListPatientBranches", "summary": "Proxy: list patient↔branch links", "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "post": { "tags": ["Proxy:Patients"], "operationId": "proxyLinkPatientBranch",   "summary": "Proxy: link patient to branch", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "201": { "$ref": "#/components/responses/Proxied2xx" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/patients/{id}/branches/{branchId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/IdPathParam" },
+        { "name": "branchId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "delete": { "tags": ["Proxy:Patients"], "operationId": "proxyUnlinkPatientBranch", "summary": "Proxy: unlink patient from branch", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "204": { "description": "Unlinked." }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+
+    "/api/v1/doctors": {
+      "summary": "Proxied to Doctors service. See doctors.openapi.json for full schemas.",
+      "get":  { "tags": ["Proxy:Doctors"], "operationId": "proxyListDoctors",  "summary": "Proxy: list doctors",  "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "429": { "$ref": "#/components/responses/RateLimited429" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "post": { "tags": ["Proxy:Doctors"], "operationId": "proxyCreateDoctor", "summary": "Proxy: create doctor", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "201": { "$ref": "#/components/responses/Proxied2xx" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/doctors/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get":   { "tags": ["Proxy:Doctors"], "operationId": "proxyGetDoctor",   "summary": "Proxy: get doctor",   "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "patch": { "tags": ["Proxy:Doctors"], "operationId": "proxyPatchDoctor", "summary": "Proxy: patch doctor", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" }, { "$ref": "#/components/parameters/IfMatchETag" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/doctors/{id}/verify":     { "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ], "post": { "tags": ["Proxy:Doctors"], "operationId": "proxyVerifyDoctor",     "summary": "Proxy: verify doctor",     "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } } },
+    "/api/v1/doctors/{id}/approve":    { "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ], "post": { "tags": ["Proxy:Doctors"], "operationId": "proxyApproveDoctor",    "summary": "Proxy: approve doctor",    "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } } },
+    "/api/v1/doctors/{id}/activate":   { "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ], "post": { "tags": ["Proxy:Doctors"], "operationId": "proxyActivateDoctor",   "summary": "Proxy: activate doctor",   "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } } },
+    "/api/v1/doctors/{id}/deactivate": { "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ], "post": { "tags": ["Proxy:Doctors"], "operationId": "proxyDeactivateDoctor", "summary": "Proxy: deactivate doctor", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } } },
+    "/api/v1/doctors/{id}/documents": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get":  { "tags": ["Proxy:Doctors"], "operationId": "proxyListDoctorDocuments",  "summary": "Proxy: list documents",  "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "post": { "tags": ["Proxy:Doctors"], "operationId": "proxyUploadDoctorDocument", "summary": "Proxy: upload document (multipart streamed)", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "requestBody": { "required": true, "content": { "multipart/form-data": { "schema": { "type": "object", "properties": { "kind": { "type": "string" }, "file": { "type": "string", "format": "binary" } }, "required": ["kind", "file"] } } } }, "responses": { "201": { "$ref": "#/components/responses/Proxied2xx" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "413": { "$ref": "#/components/responses/ProxiedProblem" }, "415": { "$ref": "#/components/responses/ProxiedProblem" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/doctors/{id}/documents/{docId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/IdPathParam" },
+        { "name": "docId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "get":    { "tags": ["Proxy:Doctors"], "operationId": "proxyGetDoctorDocument",    "summary": "Proxy: get document",    "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "patch":  { "tags": ["Proxy:Doctors"], "operationId": "proxyReviewDoctorDocument", "summary": "Proxy: review document", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "delete": { "tags": ["Proxy:Doctors"], "operationId": "proxyDeleteDoctorDocument", "summary": "Proxy: delete document", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "204": { "description": "Deleted." }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/doctors/{id}/branches": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get":  { "tags": ["Proxy:Doctors"], "operationId": "proxyListDoctorBranches", "summary": "Proxy: list doctor↔branch links", "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } },
+      "post": { "tags": ["Proxy:Doctors"], "operationId": "proxyLinkDoctorBranch",   "summary": "Proxy: link doctor to branch", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "requestBody": { "$ref": "#/components/requestBodies/AnyJson" }, "responses": { "201": { "$ref": "#/components/responses/Proxied2xx" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "422": { "$ref": "#/components/responses/Validation422" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/doctors/{id}/branches/{branchId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/IdPathParam" },
+        { "name": "branchId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "delete": { "tags": ["Proxy:Doctors"], "operationId": "proxyUnlinkDoctorBranch", "summary": "Proxy: unlink doctor from branch", "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ], "responses": { "204": { "description": "Unlinked." }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/ProxiedProblem" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+
+    "/api/v1/audit": {
+      "summary": "Proxied to Audit service (read-only via BFF). See audit.openapi.json for full schemas.",
+      "get": { "tags": ["Proxy:Audit"], "operationId": "proxyQueryAuditEntries", "summary": "Proxy: query audit ledger", "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "422": { "$ref": "#/components/responses/Validation422" }, "429": { "$ref": "#/components/responses/RateLimited429" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    },
+    "/api/v1/audit/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get": { "tags": ["Proxy:Audit"], "operationId": "proxyGetAuditEntry", "summary": "Proxy: get audit entry", "responses": { "200": { "$ref": "#/components/responses/Proxied200" }, "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }, "502": { "$ref": "#/components/responses/BadGateway502" }, "503": { "$ref": "#/components/responses/ServiceUnavailable503" }, "504": { "$ref": "#/components/responses/GatewayTimeout504" } } }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": { "type": "apiKey", "in": "cookie", "name": "nexus.sid", "description": "HttpOnly, Secure, SameSite=Strict session cookie. Set by POST /api/v1/session/login." },
+      "bearerAuth":    { "type": "http",   "scheme": "bearer", "bearerFormat": "JWT", "description": "Alternative for internal/server-side callers. Browser clients should use sessionCookie." }
+    },
+    "parameters": {
+      "IdempotencyKeyHeader": { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" } },
+      "IfMatchETag": { "name": "If-Match", "in": "header", "required": false, "schema": { "type": "string" } },
+      "IdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+    },
+    "requestBodies": {
+      "AnyJson": { "description": "Forwarded as-is to the upstream service. See the upstream OpenAPI spec for the exact body schema.", "required": true, "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } } }
+    },
+    "responses": {
+      "Proxied200":     { "description": "Successful upstream response, forwarded unchanged. See upstream spec for exact schema.", "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } } },
+      "Proxied2xx":     { "description": "Created/accepted upstream response, forwarded unchanged. See upstream spec for exact schema.", "headers": { "Location": { "schema": { "type": "string" } } }, "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } } },
+      "ProxiedProblem": { "description": "Upstream business error forwarded as `application/problem+json`. See upstream spec for the exact `code` taxonomy.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" } } } },
+      "BadRequest400":  { "description": "Malformed request at the BFF.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/bad-request", "title": "Bad Request", "status": 400, "code": "BAD_REQUEST", "detail": "Request could not be parsed.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Unauthorized401":{ "description": "Session cookie missing, expired, or revoked.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Unauthorized", "status": 401, "code": "UNAUTHENTICATED", "detail": "Session is not valid.", "instance": "/api/v1/me", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Forbidden403":   { "description": "Authenticated but not permitted.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Forbidden", "status": 403, "code": "UNAUTHORIZED", "detail": "Admin role required.", "instance": "/api/v1/admins", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "NotFound404":    { "description": "Upstream resource not found.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/not-found", "title": "Not Found", "status": 404, "code": "NOT_FOUND", "detail": "Resource was not found.", "instance": "/api/v1/patients/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "LifecycleConflict409": { "description": "Invalid state transition reported by upstream.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/lifecycle", "title": "Conflict", "status": 409, "code": "LIFECYCLE_INVALID_TRANSITION", "detail": "Invalid state transition.", "instance": "/api/v1/patients/0a9f6c81/activate", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Validation422":  { "description": "Validation failed (at BFF or upstream).", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/validation", "title": "Validation failed", "status": 422, "code": "VALIDATION", "detail": "One or more fields are invalid.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "email", "message": "Invalid email format." } ] } } } },
+      "RateLimited429": { "description": "Rate limit exceeded at the BFF.", "headers": { "Retry-After": { "schema": { "type": "integer" } } }, "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/rate-limited", "title": "Too Many Requests", "status": 429, "code": "RATE_LIMITED", "detail": "Request rate exceeded.", "instance": "/api/v1/session/login", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "BadGateway502":  { "description": "Upstream returned an invalid response.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/bad-gateway", "title": "Bad Gateway", "status": 502, "code": "UPSTREAM_BAD_RESPONSE", "detail": "Upstream service returned an unexpected response.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "ServiceUnavailable503": { "description": "Upstream service is unavailable.", "headers": { "Retry-After": { "schema": { "type": "integer" } } }, "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/dependency-unavailable", "title": "Service Unavailable", "status": 503, "code": "DEPENDENCY_UNAVAILABLE", "detail": "Patients service is temporarily unavailable.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "GatewayTimeout504": { "description": "Upstream service timed out.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/gateway-timeout", "title": "Gateway Timeout", "status": 504, "code": "UPSTREAM_TIMEOUT", "detail": "Upstream service did not respond in time.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "description": "RFC 9457 Problem Details with Nexus HA extensions.",
+        "properties": {
+          "type": { "type": "string", "format": "uri" }, "title": { "type": "string" }, "status": { "type": "integer" },
+          "detail": { "type": "string" }, "instance": { "type": "string" }, "code": { "type": "string" }, "traceId": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "object", "properties": { "field": { "type": "string" }, "message": { "type": "string" } }, "required": ["field", "message"] } }
+        },
+        "required": ["type", "title", "status"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "username": { "type": "string", "minLength": 3, "maxLength": 64 },
+          "password": { "type": "string", "format": "password", "minLength": 8 }
+        },
+        "required": ["username", "password"]
+      },
+      "Me": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "role": { "type": "string", "enum": ["Admin"] },
+          "sessionExpiresAtUtc": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "username", "displayName", "role", "sessionExpiresAtUtc"]
+      }
+    }
+  }
+}

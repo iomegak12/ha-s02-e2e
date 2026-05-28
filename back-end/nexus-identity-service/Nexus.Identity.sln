@@ -1,0 +1,27 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.0.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus.Identity.Api", "src\Nexus.Identity.Api\Nexus.Identity.Api.csproj", "{2A8E9F1A-1111-4A11-A111-111111111111}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus.Identity.Api.Tests", "tests\Nexus.Identity.Api.Tests\Nexus.Identity.Api.Tests.csproj", "{2A8E9F1A-2222-4A22-A222-222222222222}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2A8E9F1A-1111-4A11-A111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A8E9F1A-1111-4A11-A111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A8E9F1A-1111-4A11-A111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A8E9F1A-1111-4A11-A111-111111111111}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A8E9F1A-2222-4A22-A222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A8E9F1A-2222-4A22-A222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A8E9F1A-2222-4A22-A222-222222222222}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A8E9F1A-2222-4A22-A222-222222222222}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

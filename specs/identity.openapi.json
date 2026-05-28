@@ -1,0 +1,421 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nexus HA — Identity & Admin Service API",
+    "version": "1.0.0",
+    "summary": "Self-hosted identity provider for hospital administrators.",
+    "description": "Authenticates admin users, issues short-lived JWT access tokens (RS256) plus refresh tokens, publishes the signing JWKS, and manages admin accounts. Patients and doctors never authenticate.",
+    "contact": { "name": "Nexus HA Engineering", "email": "engineering@nexusha.local" },
+    "license": { "name": "Proprietary" }
+  },
+  "servers": [
+    { "url": "http://localhost:5001", "description": "Local development (placeholder port)" },
+    { "url": "https://dev.api.nexusha.local/identity", "description": "Dev environment" },
+    { "url": "https://api.nexusha.local/identity", "description": "Production" }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Token issuance, refresh, revocation, and JWKS publication." },
+    { "name": "Admins", "description": "Admin account management (admin-only)." }
+  ],
+  "security": [ { "bearerAuth": [] } ],
+  "paths": {
+    "/api/v1/auth/token": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "issueToken",
+        "summary": "Exchange admin credentials for an access + refresh token pair",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TokenRequest" },
+              "example": { "username": "asha.menon", "password": "S3cret!Pa55word" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token issued.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TokenResponse" },
+                "example": {
+                  "accessToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im5leHVzLTIwMjYtMDUifQ.eyJzdWIiOiIwYTlmIiwicm9sZSI6IkFkbWluIiwiZXhwIjoxNzQ4MzQ4ODAwfQ.signature",
+                  "tokenType": "Bearer",
+                  "expiresIn": 900,
+                  "refreshToken": "eyJ0eXAiOiJyZWZyZXNoIn0.payload.signature"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": {
+            "description": "Invalid credentials.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" },
+                "example": {
+                  "type": "https://errors.nexusha.local/invalid-credentials",
+                  "title": "Unauthorized",
+                  "status": 401,
+                  "code": "INVALID_CREDENTIALS",
+                  "detail": "Username or password is incorrect.",
+                  "instance": "/api/v1/auth/token",
+                  "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01"
+                }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/Validation422" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "refreshToken",
+        "summary": "Exchange a refresh token for a new access token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RefreshRequest" },
+              "example": { "refreshToken": "eyJ0eXAiOiJyZWZyZXNoIn0.payload.signature" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New token issued.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TokenResponse" },
+                "example": { "accessToken": "eyJhbGciOiJSUzI1NiJ9.new.signature", "tokenType": "Bearer", "expiresIn": 900, "refreshToken": "eyJ0eXAiOiJyZWZyZXNoIn0.rotated.signature" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": {
+            "description": "Refresh token expired, revoked, or unknown.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" },
+                "example": { "type": "https://errors.nexusha.local/invalid-refresh", "title": "Unauthorized", "status": 401, "code": "REFRESH_INVALID", "detail": "Refresh token is no longer valid.", "instance": "/api/v1/auth/refresh", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      }
+    },
+    "/api/v1/auth/revoke": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "revokeToken",
+        "summary": "Revoke a refresh token",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RefreshRequest" },
+              "example": { "refreshToken": "eyJ0eXAiOiJyZWZyZXNoIn0.payload.signature" }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Token revoked (idempotent)." },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      }
+    },
+    "/.well-known/jwks.json": {
+      "get": {
+        "tags": ["Auth"],
+        "operationId": "getJwks",
+        "summary": "Public signing keys (JWKS)",
+        "description": "Returned set is consumed by every service to validate JWTs locally. Keys rotate periodically.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Current JSON Web Key Set.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Jwks" },
+                "example": {
+                  "keys": [
+                    { "kty": "RSA", "use": "sig", "alg": "RS256", "kid": "nexus-2026-05", "n": "0vx7agoebGcQSuuPiLJXZptN9nndr...", "e": "AQAB" }
+                  ]
+                }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      }
+    },
+    "/api/v1/admins": {
+      "get": {
+        "tags": ["Admins"],
+        "operationId": "listAdmins",
+        "summary": "List admin accounts",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/SizeParam" },
+          { "$ref": "#/components/parameters/SortParam" },
+          { "name": "isActive", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged list of admins.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedAdmin" },
+                "example": { "page": 1, "size": 20, "totalCount": 1, "items": [ { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "username": "asha.menon", "displayName": "Asha Menon", "isActive": true, "createdAtUtc": "2026-04-01T10:00:00Z" } ] }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      },
+      "post": {
+        "tags": ["Admins"],
+        "operationId": "createAdmin",
+        "summary": "Create a new admin account",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminCreate" },
+              "example": { "username": "rohit.shah", "displayName": "Rohit Shah", "password": "Initial!Pa55word", "isActive": true }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Admin created.",
+            "headers": { "Location": { "schema": { "type": "string" } } },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Admin" },
+                "example": { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f71", "username": "rohit.shah", "displayName": "Rohit Shah", "isActive": true, "createdAtUtc": "2026-05-27T09:00:00Z" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "409": {
+            "description": "Username already in use.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" },
+                "example": { "type": "https://errors.nexusha.local/duplicate-username", "title": "Conflict", "status": 409, "code": "ADMIN_USERNAME_DUPLICATE", "detail": "An admin with username 'rohit.shah' already exists.", "instance": "/api/v1/admins", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/Validation422" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      }
+    },
+    "/api/v1/admins/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get": {
+        "tags": ["Admins"],
+        "operationId": "getAdminById",
+        "summary": "Get admin by id",
+        "responses": {
+          "200": {
+            "description": "Admin found.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Admin" },
+                "example": { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "username": "asha.menon", "displayName": "Asha Menon", "isActive": true, "createdAtUtc": "2026-04-01T10:00:00Z" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }
+        }
+      },
+      "patch": {
+        "tags": ["Admins"],
+        "operationId": "patchAdmin",
+        "summary": "Partially update an admin",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdempotencyKeyHeader" },
+          { "$ref": "#/components/parameters/IfMatchETag" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminPatch" },
+              "example": { "displayName": "Asha M. Menon", "isActive": true }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Admin updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Admin" },
+                "example": { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "username": "asha.menon", "displayName": "Asha M. Menon", "isActive": true, "createdAtUtc": "2026-04-01T10:00:00Z" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "422": { "$ref": "#/components/responses/Validation422" }
+        }
+      },
+      "delete": {
+        "tags": ["Admins"],
+        "operationId": "deactivateAdmin",
+        "summary": "Deactivate an admin (soft delete via isActive=false)",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "204": { "description": "Admin deactivated." },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT", "description": "JWT (RS256) issued by this service. Validated via JWKS." }
+    },
+    "parameters": {
+      "PageParam": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+      "SizeParam": { "name": "size", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } },
+      "SortParam": { "name": "sort", "in": "query", "schema": { "type": "string" }, "description": "Sort expression, e.g. `createdAtUtc:desc`." },
+      "IdempotencyKeyHeader": { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" } },
+      "IfMatchETag": { "name": "If-Match", "in": "header", "required": false, "schema": { "type": "string" } },
+      "IdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+    },
+    "responses": {
+      "BadRequest400": { "description": "Malformed request.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/bad-request", "title": "Bad Request", "status": 400, "code": "BAD_REQUEST", "detail": "Request body could not be parsed.", "instance": "/api/v1/admins", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Unauthorized401": { "description": "Missing or invalid bearer token.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Unauthorized", "status": 401, "code": "UNAUTHENTICATED", "detail": "Bearer token is missing or invalid.", "instance": "/api/v1/admins", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Forbidden403": { "description": "Authenticated but not permitted.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Forbidden", "status": 403, "code": "UNAUTHORIZED", "detail": "Admin role required.", "instance": "/api/v1/admins", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "NotFound404": { "description": "Resource not found.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/not-found", "title": "Not Found", "status": 404, "code": "NOT_FOUND", "detail": "Admin was not found.", "instance": "/api/v1/admins/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Validation422": { "description": "Validation failed.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/validation", "title": "Validation failed", "status": 422, "code": "ADMIN_VALIDATION", "detail": "One or more fields are invalid.", "instance": "/api/v1/admins", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "password", "message": "Password does not meet complexity requirements." } ] } } } },
+      "RateLimited429": { "description": "Too many requests.", "headers": { "Retry-After": { "schema": { "type": "integer" } } }, "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/rate-limited", "title": "Too Many Requests", "status": 429, "code": "RATE_LIMITED", "detail": "Request rate exceeded.", "instance": "/api/v1/auth/token", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "description": "RFC 9457 Problem Details with Nexus HA extensions.",
+        "properties": {
+          "type": { "type": "string", "format": "uri" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "instance": { "type": "string" },
+          "code": { "type": "string" },
+          "traceId": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "object", "properties": { "field": { "type": "string" }, "message": { "type": "string" } }, "required": ["field", "message"] } }
+        },
+        "required": ["type", "title", "status"]
+      },
+      "TokenRequest": {
+        "type": "object",
+        "properties": {
+          "username": { "type": "string", "minLength": 3, "maxLength": 64 },
+          "password": { "type": "string", "format": "password", "minLength": 8 }
+        },
+        "required": ["username", "password"]
+      },
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Short-lived JWT (RS256). Default lifetime ~15 minutes." },
+          "tokenType": { "type": "string", "enum": ["Bearer"] },
+          "expiresIn": { "type": "integer", "description": "Access token lifetime in seconds." },
+          "refreshToken": { "type": "string", "description": "Longer-lived, hashed at rest, revocable." }
+        },
+        "required": ["accessToken", "tokenType", "expiresIn", "refreshToken"]
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "properties": { "refreshToken": { "type": "string" } },
+        "required": ["refreshToken"]
+      },
+      "Jwks": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kty": { "type": "string", "example": "RSA" },
+                "use": { "type": "string", "example": "sig" },
+                "alg": { "type": "string", "example": "RS256" },
+                "kid": { "type": "string" },
+                "n": { "type": "string", "description": "RSA modulus (base64url)." },
+                "e": { "type": "string", "description": "RSA exponent (base64url)." }
+              },
+              "required": ["kty", "kid", "alg"]
+            }
+          }
+        },
+        "required": ["keys"]
+      },
+      "Admin": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "isActive": { "type": "boolean" },
+          "createdAtUtc": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "username", "displayName", "isActive", "createdAtUtc"]
+      },
+      "AdminCreate": {
+        "type": "object",
+        "properties": {
+          "username": { "type": "string", "minLength": 3, "maxLength": 64, "pattern": "^[a-z0-9._-]+$" },
+          "displayName": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "password": { "type": "string", "format": "password", "minLength": 8, "maxLength": 128 },
+          "isActive": { "type": "boolean", "default": true }
+        },
+        "required": ["username", "displayName", "password"]
+      },
+      "AdminPatch": {
+        "type": "object",
+        "description": "Partial update. `username` is immutable. Password changes use a dedicated flow (not in this phase).",
+        "properties": {
+          "displayName": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "isActive": { "type": "boolean" }
+        }
+      },
+      "PagedAdmin": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "size": { "type": "integer" },
+          "totalCount": { "type": "integer" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Admin" } }
+        },
+        "required": ["page", "size", "totalCount", "items"]
+      }
+    }
+  }
+}

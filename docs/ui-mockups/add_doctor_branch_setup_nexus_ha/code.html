@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nexus HA - Add New Doctor (Step 3)</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "status-archived": "#374151",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#dce2f3",
+                        "surface-bright": "#f9f9ff",
+                        "on-tertiary-fixed": "#191c1d",
+                        "surface-container": "#e7eefe",
+                        "secondary-container": "#39b8fd",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-secondary-container": "#004666",
+                        "inverse-primary": "#c3c0ff",
+                        "primary": "#3525cd",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#004c6e",
+                        "surface-dim": "#d3daea",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-tertiary": "#ffffff",
+                        "status-active": "#10B981",
+                        "on-surface-variant": "#464555",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-tint": "#4d44e3",
+                        "secondary-fixed-dim": "#89ceff",
+                        "surface-card": "#FFFFFF",
+                        "status-verified": "#6366F1",
+                        "secondary-fixed": "#c9e6ff",
+                        "on-tertiary-container": "#dadbdc",
+                        "surface-container-high": "#e2e8f8",
+                        "primary-fixed": "#e2dfff",
+                        "inverse-surface": "#2a313d",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed": "#e1e3e4",
+                        "surface-variant": "#dce2f3",
+                        "surface-container-low": "#f0f3ff",
+                        "background": "#f9f9ff",
+                        "surface-bg": "#F3F4F6",
+                        "tertiary": "#46494a",
+                        "secondary": "#006591",
+                        "status-pending": "#F59E0B",
+                        "on-error": "#ffffff",
+                        "tertiary-container": "#5e6061",
+                        "primary-container": "#4f46e5",
+                        "outline": "#777587",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "status-error": "#EF4444",
+                        "on-primary-container": "#dad7ff",
+                        "outline-variant": "#c7c4d8",
+                        "on-surface": "#151c27",
+                        "on-tertiary-fixed-variant": "#454748",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#f9f9ff",
+                        "on-secondary-fixed": "#001e2f",
+                        "on-background": "#151c27",
+                        "tertiary-fixed-dim": "#c5c7c8",
+                        "inverse-on-surface": "#ebf1ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "12px",
+                        "sidebar-width": "240px",
+                        "stack-sm": "4px",
+                        "gutter-grid": "16px",
+                        "padding-card": "20px",
+                        "stack-lg": "24px",
+                        "margin-page": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Roboto"],
+                        "code-mono": ["JetBrains Mono"],
+                        "headline-md": ["Roboto"],
+                        "label-bold": ["Roboto"],
+                        "body-base": ["Roboto"],
+                        "body-sm": ["Roboto"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "code-mono": ["11px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-bold": ["12px", { "lineHeight": "16px", "fontWeight": "700" }],
+                        "body-base": ["12px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-sm": ["11px", { "lineHeight": "16px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for clinical feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dce2f3;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c7c4d8;
+        }
+    </style>
+</head>
+<body class="bg-surface-bg text-on-surface font-body-base antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<nav class="bg-surface border-r border-outline-variant fixed left-0 top-0 h-full w-[240px] flex flex-col py-6 space-y-1 overflow-y-auto z-20">
+<!-- Header -->
+<div class="px-6 pb-6 mb-2 border-b border-surface-container-highest">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center text-primary font-bold">
+<span class="material-symbols-outlined icon-fill">local_hospital</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-black text-primary">Nexus HA</h1>
+<p class="font-body-sm text-body-sm text-outline">Clinical Admin</p>
+</div>
+</div>
+</div>
+<!-- Navigation Links -->
+<div class="flex-1 px-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-body-base text-body-base">Home</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-base text-body-base">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-body-base text-body-base">Patients</span>
+</a>
+<!-- Active State for Doctors -->
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer bg-primary-container text-on-primary-container font-bold rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined icon-fill">medical_services</span>
+<span class="font-body-base text-body-base">Doctors</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-body-base text-body-base">Branches</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="font-body-base text-body-base">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">newspaper</span>
+<span class="font-body-base text-body-base">News</span>
+</a>
+</div>
+<!-- Footer Links -->
+<div class="px-4 pt-4 border-t border-surface-container-highest space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-body-base text-body-base">Terms</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">contact_support</span>
+<span class="font-body-base text-body-base">Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-base text-body-base">Settings</span>
+</a>
+<div class="mt-4 pt-4 border-t border-surface-container-highest">
+<div class="flex items-center justify-between px-4 py-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-label-bold text-label-bold text-on-surface">Asha Menon</span>
+</div>
+<button class="text-outline hover:text-error transition-colors">
+<span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
+</button>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-[240px] flex flex-col h-full relative">
+<!-- Header & Progress Indicator -->
+<header class="bg-surface-card border-b border-outline-variant px-margin-page py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-10">
+<div>
+<div class="flex items-center gap-2 text-outline mb-1">
+<a class="hover:text-primary font-body-sm text-body-sm flex items-center" href="#"><span class="material-symbols-outlined text-[14px]">arrow_back</span> Back to Directory</a>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Add New Doctor</h2>
+</div>
+<!-- Progress Stepper -->
+<div class="flex items-center">
+<!-- Step 1: Done -->
+<div class="flex items-center">
+<div class="w-8 h-8 rounded-full bg-status-active text-on-primary flex items-center justify-center border-2 border-status-active">
+<span class="material-symbols-outlined text-[16px] icon-fill">check</span>
+</div>
+<div class="h-1 w-12 bg-status-active"></div>
+</div>
+<!-- Step 2: Done -->
+<div class="flex items-center">
+<div class="w-8 h-8 rounded-full bg-status-active text-on-primary flex items-center justify-center border-2 border-status-active">
+<span class="material-symbols-outlined text-[16px] icon-fill">check</span>
+</div>
+<div class="h-1 w-12 bg-status-active"></div>
+</div>
+<!-- Step 3: Active -->
+<div class="flex items-center">
+<div class="w-8 h-8 rounded-full bg-primary-container text-primary flex items-center justify-center border-2 border-primary font-label-bold text-label-bold">
+                        3
+                    </div>
+<div class="ml-3 flex flex-col">
+<span class="font-label-bold text-label-bold text-on-surface">Branch Setup</span>
+<span class="font-body-sm text-body-sm text-outline">Finalizing assignment</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Scrollable Form Content -->
+<div class="flex-1 overflow-y-auto p-margin-page pb-24">
+<div class="max-w-4xl mx-auto space-y-stack-lg">
+<form class="space-y-stack-lg" id="wizard-step-3">
+<!-- Section: Branch Assignment -->
+<section class="bg-surface-card rounded-lg border border-surface-container-highest shadow-sm p-padding-card">
+<div class="border-b border-surface-container-highest pb-4 mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">account_tree</span>
+<h3 class="font-label-bold text-label-bold text-on-surface uppercase tracking-wider">Facility Assignment</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter-grid">
+<!-- Primary Branch -->
+<div class="col-span-1 md:col-span-2">
+<label class="block font-label-bold text-label-bold text-on-surface mb-2" for="primary-branch">Primary Branch <span class="text-error">*</span></label>
+<div class="relative">
+<select class="block w-full rounded-DEFAULT border-outline-variant bg-surface py-2 pl-3 pr-10 text-on-surface font-body-base focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer" id="primary-branch" name="primary-branch" required="">
+<option disabled="" selected="" value="">Select central operating facility...</option>
+<option value="b1">Nexus Central Hospital</option>
+<option value="b2">Northside Clinic</option>
+<option value="b3">Westview Specialty Center</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-outline">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+<p class="mt-1 font-body-sm text-body-sm text-outline">This facility will dictate primary scheduling and payroll alignment.</p>
+</div>
+<!-- Secondary Branches -->
+<div class="col-span-1 md:col-span-2 mt-4">
+<label class="block font-label-bold text-label-bold text-on-surface mb-3">Secondary Branches (Optional)</label>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 border border-surface-container-highest rounded-DEFAULT p-4 bg-surface-bright">
+<label class="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-surface-container-low transition-colors">
+<div class="flex items-center h-5">
+<input class="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary bg-surface" type="checkbox"/>
+</div>
+<div class="flex flex-col">
+<span class="font-body-base text-body-base text-on-surface font-medium">East District Outpatient</span>
+<span class="font-body-sm text-body-sm text-outline">Consultations only</span>
+</div>
+</label>
+<label class="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-surface-container-low transition-colors">
+<div class="flex items-center h-5">
+<input class="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary bg-surface" type="checkbox"/>
+</div>
+<div class="flex flex-col">
+<span class="font-body-base text-body-base text-on-surface font-medium">South Pediatric Wing</span>
+<span class="font-body-sm text-body-sm text-outline">On-call rotation</span>
+</div>
+</label>
+<label class="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-surface-container-low transition-colors">
+<div class="flex items-center h-5">
+<input class="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary bg-surface" type="checkbox"/>
+</div>
+<div class="flex flex-col">
+<span class="font-body-base text-body-base text-on-surface font-medium">Nexus Central Labs</span>
+<span class="font-body-sm text-body-sm text-outline">Research access</span>
+</div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Access Rights -->
+<section class="bg-surface-card rounded-lg border border-surface-container-highest shadow-sm p-padding-card">
+<div class="border-b border-surface-container-highest pb-4 mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">admin_panel_settings</span>
+<h3 class="font-label-bold text-label-bold text-on-surface uppercase tracking-wider">System Privileges</h3>
+</div>
+<div class="flex items-start justify-between bg-surface-container-low p-4 rounded-DEFAULT border border-surface-container-high">
+<div class="flex gap-4">
+<div class="mt-1 text-primary">
+<span class="material-symbols-outlined icon-fill">shield_person</span>
+</div>
+<div>
+<h4 class="font-label-bold text-label-bold text-on-surface mb-1">Clinical Access Rights</h4>
+<p class="font-body-base text-body-base text-on-surface-variant max-w-2xl">
+                                        Granting clinical access allows this profile to write prescriptions, access complete patient Electronic Health Records (EHR), and approve lab results across assigned branches.
+                                    </p>
+</div>
+</div>
+<!-- Toggle Switch -->
+<label class="relative inline-flex items-center cursor-pointer flex-shrink-0 mt-1">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-container rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</section>
+<!-- Section: Profile Summary (Read-only) -->
+<section class="bg-surface-bright rounded-lg border border-outline-variant shadow-sm overflow-hidden">
+<div class="bg-surface-container py-3 px-padding-card flex items-center justify-between border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-secondary-container">fact_check</span>
+<h3 class="font-label-bold text-label-bold text-on-secondary-container uppercase tracking-wider">Final Verification Summary</h3>
+</div>
+<span class="bg-status-pending text-on-surface font-code-mono text-[10px] px-2 py-1 rounded uppercase tracking-wide">Draft Record</span>
+</div>
+<div class="p-padding-card flex flex-col md:flex-row gap-8">
+<!-- Avatar placeholder -->
+<div class="flex-shrink-0 w-24 h-24 bg-surface-container-highest rounded-full border-2 border-surface overflow-hidden flex items-center justify-center relative">
+<!-- Using placeholder visually, prompting for actual integration later -->
+<span class="material-symbols-outlined text-outline text-[40px]">person</span>
+<!-- Hidden image tag with data-alt for generator logic if needed by pipeline -->
+<img alt="" class="hidden w-full h-full object-cover" data-alt="A professional, well-lit headshot of a medical doctor in a clinical setting. The doctor is wearing a clean white lab coat over a neat shirt. The background is a soft, out-of-focus hospital corridor or clinic wall, bright and modern. The lighting is even, conveying trust and competence, fitting perfectly within a light-mode administrative interface." src=""/>
+</div>
+<div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+<div>
+<p class="font-body-sm text-body-sm text-outline mb-1">Full Name</p>
+<p class="font-body-base text-body-base text-on-surface font-medium">Dr. Sarah Jenkins, MD</p>
+</div>
+<div>
+<p class="font-body-sm text-body-sm text-outline mb-1">Specialty</p>
+<p class="font-body-base text-body-base text-on-surface">Cardiology / Electrophysiology</p>
+</div>
+<div>
+<p class="font-body-sm text-body-sm text-outline mb-1">Medical License No.</p>
+<p class="font-code-mono text-code-mono text-tertiary">MED-982-XYZ-44</p>
+</div>
+<div>
+<p class="font-body-sm text-body-sm text-outline mb-1">Contact Email</p>
+<p class="font-body-base text-body-base text-on-surface">s.jenkins@nexusha.org</p>
+</div>
+</div>
+</div>
+</section>
+</form>
+</div>
+</div>
+<!-- Sticky Footer Actions -->
+<footer class="absolute bottom-0 left-0 w-full bg-surface border-t border-outline-variant p-4 px-margin-page flex items-center justify-between z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+<button class="px-6 py-2 border border-outline text-on-surface-variant font-label-bold text-label-bold rounded-DEFAULT hover:bg-surface-container-highest transition-colors flex items-center gap-2" type="button">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                Back
+            </button>
+<button class="px-6 py-2 bg-primary text-on-primary font-label-bold text-label-bold rounded-DEFAULT hover:bg-surface-tint transition-colors shadow-sm flex items-center gap-2" form="wizard-step-3" type="submit">
+                Submit for Verification
+                <span class="material-symbols-outlined text-[18px]">verified</span>
+</button>
+</footer>
+</main>
+</body></html>

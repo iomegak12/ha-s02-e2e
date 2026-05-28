@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nexus HA - Create Doctor Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "inverse-on-surface": "#ebf1ff",
+                      "inverse-surface": "#2a313d",
+                      "status-pending": "#F59E0B",
+                      "secondary-fixed": "#c9e6ff",
+                      "secondary-fixed-dim": "#89ceff",
+                      "on-surface": "#151c27",
+                      "on-secondary-container": "#004666",
+                      "on-secondary-fixed": "#001e2f",
+                      "surface-tint": "#4d44e3",
+                      "primary": "#3525cd",
+                      "on-secondary-fixed-variant": "#004c6e",
+                      "status-archived": "#374151",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "on-surface-variant": "#464555",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "inverse-primary": "#c3c0ff",
+                      "on-error-container": "#93000a",
+                      "background": "#f9f9ff",
+                      "surface-dim": "#d3daea",
+                      "surface-container-high": "#e2e8f8",
+                      "on-primary-container": "#dad7ff",
+                      "tertiary": "#46494a",
+                      "status-error": "#EF4444",
+                      "tertiary-fixed-dim": "#c5c7c8",
+                      "surface-bright": "#f9f9ff",
+                      "surface-variant": "#dce2f3",
+                      "surface-container-low": "#f0f3ff",
+                      "secondary-container": "#39b8fd",
+                      "tertiary-fixed": "#e1e3e4",
+                      "primary-fixed": "#e2dfff",
+                      "secondary": "#006591",
+                      "on-tertiary-fixed": "#191c1d",
+                      "outline-variant": "#c7c4d8",
+                      "surface": "#f9f9ff",
+                      "status-active": "#10B981",
+                      "on-tertiary-container": "#dadbdc",
+                      "on-primary-fixed": "#0f0069",
+                      "error-container": "#ffdad6",
+                      "primary-container": "#4f46e5",
+                      "tertiary-container": "#5e6061",
+                      "surface-container-highest": "#dce2f3",
+                      "on-tertiary": "#ffffff",
+                      "status-verified": "#6366F1",
+                      "outline": "#777587",
+                      "on-error": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "on-background": "#151c27",
+                      "surface-bg": "#F3F4F6",
+                      "error": "#ba1a1a",
+                      "surface-container": "#e7eefe",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-card": "#FFFFFF",
+                      "on-tertiary-fixed-variant": "#454748",
+                      "on-secondary": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-lg": "24px",
+                      "sidebar-width": "240px",
+                      "gutter-grid": "16px",
+                      "stack-md": "12px",
+                      "margin-page": "24px",
+                      "padding-card": "20px",
+                      "stack-sm": "4px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Roboto"
+                      ],
+                      "label-bold": [
+                              "Roboto"
+                      ],
+                      "display-lg": [
+                              "Roboto"
+                      ],
+                      "body-base": [
+                              "Roboto"
+                      ],
+                      "code-mono": [
+                              "JetBrains Mono"
+                      ],
+                      "body-sm": [
+                              "Roboto"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-bold": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "30px",
+                              {
+                                      "lineHeight": "38px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-base": [
+                              "12px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "code-mono": [
+                              "11px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-sm": [
+                              "11px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings:
+          'FILL' 0,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24
+        }
+        [data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            background-color: theme('colors.surface-bg');
+            color: theme('colors.on-background');
+        }
+        
+        /* Custom Scrollbar for side nav if needed */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: theme('colors.outline-variant');
+            border-radius: theme('borderRadius.full');
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden font-body-base text-body-base antialiased bg-surface-bg text-on-background">
+<!-- SideNavBar (Hidden on Mobile, Visible on Desktop) -->
+<aside class="hidden md:flex flex-col h-full bg-surface dark:bg-inverse-surface fixed left-0 top-0 w-[240px] border-r border-outline-variant dark:border-outline z-20">
+<!-- Header -->
+<div class="px-6 py-6 border-b border-outline-variant dark:border-outline flex flex-col gap-1">
+<h1 class="font-headline-md text-headline-md font-black text-primary dark:text-primary-fixed tracking-tight">Nexus HA</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Clinical Admin</p>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col flex-1 py-6 space-y-1 overflow-y-auto px-2 custom-scrollbar">
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="home">home</span>
+<span class="font-body-base text-body-base">Home</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="dashboard">dashboard</span>
+<span class="font-body-base text-body-base">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="group">group</span>
+<span class="font-body-base text-body-base">Patients</span>
+</a>
+<a aria-current="page" class="flex items-center gap-3 px-4 py-3 cursor-pointer bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary font-bold rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="medical_services" data-weight="fill">medical_services</span>
+<span class="font-body-base text-body-base">Doctors</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="account_tree">account_tree</span>
+<span class="font-body-base text-body-base">Branches</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="history_edu">history_edu</span>
+<span class="font-body-base text-body-base">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="newspaper">newspaper</span>
+<span class="font-body-base text-body-base">News</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="description">description</span>
+<span class="font-body-base text-body-base">Terms</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="contact_support">contact_support</span>
+<span class="font-body-base text-body-base">Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="settings">settings</span>
+<span class="font-body-base text-body-base">Settings</span>
+</a>
+</nav>
+<!-- Footer Actions -->
+<div class="mt-auto px-4 py-4 border-t border-outline-variant dark:border-outline space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors" data-icon="account_circle">account_circle</span>
+<span class="font-body-base text-body-base">Asha Menon</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-error transition-colors" data-icon="logout">logout</span>
+<span class="font-body-base text-body-base">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col md:ml-[240px] h-screen overflow-hidden bg-surface-bg relative">
+<!-- TopNavBar (Mobile Only for Navigation, but we suppress shell entirely for transactional flows per instruction. Wait, the prompt says "Sidebar highlights 'Doctors'". So we keep the sidebar on desktop. On mobile, we should probably hide the bottom nav since this is a wizard, but the prompt implies it's a sub-page. Let's just provide a simple top bar for the wizard header on mobile if needed, or rely on the content area.) -->
+<!-- Wizard Header Bar -->
+<header class="bg-surface-container-lowest border-b border-outline-variant px-6 py-4 flex items-center justify-between z-10 shrink-0">
+<div class="flex items-center gap-4">
+<button class="md:hidden text-on-surface p-2 rounded-full hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<div>
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface">Add New Doctor</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Complete the professional profile to proceed.</p>
+</div>
+</div>
+<div class="hidden sm:flex items-center gap-3">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="flex-1 overflow-y-auto p-4 md:p-margin-page bg-surface-bg">
+<div class="max-w-4xl mx-auto space-y-stack-lg pb-20">
+<!-- Progress Stepper (Bento/Card Style) -->
+<div class="bg-surface-card rounded-xl border border-outline-variant p-6 shadow-sm">
+<div class="flex items-center justify-between relative">
+<!-- Connecting Line -->
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-surface-variant z-0"></div>
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-[33%] h-0.5 bg-primary z-0 transition-all duration-500"></div>
+<!-- Step 1: Core Profile (Active) -->
+<div class="relative z-10 flex flex-col items-center gap-2 bg-surface-card px-2">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-bold text-label-bold shadow-sm ring-4 ring-surface-card">
+                                1
+                            </div>
+<span class="font-label-bold text-label-bold text-primary">Core Profile</span>
+</div>
+<!-- Step 2: Credentials (Pending) -->
+<div class="relative z-10 flex flex-col items-center gap-2 bg-surface-card px-2">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-label-bold text-label-bold ring-4 ring-surface-card">
+                                2
+                            </div>
+<span class="font-label-bold text-label-bold text-on-surface-variant">Credentials &amp; Docs</span>
+</div>
+<!-- Step 3: Branch Setup (Pending) -->
+<div class="relative z-10 flex flex-col items-center gap-2 bg-surface-card px-2">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-label-bold text-label-bold ring-4 ring-surface-card">
+                                3
+                            </div>
+<span class="font-label-bold text-label-bold text-on-surface-variant">Branch Setup</span>
+</div>
+</div>
+</div>
+<!-- Form Area -->
+<form class="space-y-stack-lg">
+<!-- Glassmorphism-inspired Section Card -->
+<div class="bg-surface-card/80 backdrop-blur-md rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-outline-variant bg-surface-container-lowest flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]" data-icon="person">person</span>
+</div>
+<h3 class="font-headline-md text-[16px] leading-[24px] font-medium text-on-surface">Step 1: Professional Profile</h3>
+</div>
+<div class="p-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-gutter-grid gap-y-stack-md">
+<!-- First Name -->
+<div class="flex flex-col gap-1">
+<label class="font-label-bold text-label-bold text-on-surface" for="firstName">First Name</label>
+<input class="w-full h-10 px-3 bg-surface-lowest border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline" id="firstName" name="firstName" placeholder="e.g. Sarah" type="text"/>
+</div>
+<!-- Last Name -->
+<div class="flex flex-col gap-1">
+<label class="font-label-bold text-label-bold text-on-surface" for="lastName">Last Name</label>
+<input class="w-full h-10 px-3 bg-surface-lowest border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline" id="lastName" name="lastName" placeholder="e.g. Jenkins" type="text"/>
+</div>
+<!-- Specialty -->
+<div class="flex flex-col gap-1 md:col-span-2">
+<label class="font-label-bold text-label-bold text-on-surface" for="specialty">Primary Specialty</label>
+<div class="relative">
+<select class="w-full h-10 px-3 bg-surface-lowest border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none pr-10" id="specialty" name="specialty">
+<option disabled="" selected="" value="">Select specialty...</option>
+<option value="cardiology">Cardiology</option>
+<option value="neurology">Neurology</option>
+<option value="pediatrics">Pediatrics</option>
+<option value="orthopedics">Orthopedics</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-outline mt-1">Defines clinical access rights.</p>
+</div>
+<!-- License Number -->
+<div class="flex flex-col gap-1 md:col-span-2">
+<label class="font-label-bold text-label-bold text-on-surface" for="license">Medical License Number</label>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-outline">
+<span class="material-symbols-outlined text-[18px]" data-icon="badge">badge</span>
+</div>
+<input class="w-full h-10 pl-10 pr-3 bg-surface-lowest border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors font-code-mono placeholder:font-body-base placeholder:text-outline" id="license" name="license" placeholder="e.g. MED-12345678" type="text"/>
+</div>
+</div>
+<!-- Email -->
+<div class="flex flex-col gap-1">
+<label class="font-label-bold text-label-bold text-on-surface" for="email">Professional Email</label>
+<input class="w-full h-10 px-3 bg-surface-lowest border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline" id="email" name="email" placeholder="dr.smith@nexusha.com" type="email"/>
+</div>
+<!-- Phone -->
+<div class="flex flex-col gap-1">
+<label class="font-label-bold text-label-bold text-on-surface" for="phone">Contact Phone</label>
+<input class="w-full h-10 px-3 bg-surface-lowest border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline" id="phone" name="phone" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center justify-end gap-3 pt-4">
+<button class="h-10 px-4 rounded-lg border border-primary text-primary font-body-base font-medium text-body-base hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-bg transition-colors" type="button">
+                            Cancel
+                        </button>
+<button class="h-10 px-6 rounded-lg bg-primary text-on-primary font-body-base font-medium text-body-base hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface-bg transition-colors flex items-center gap-2" type="button">
+                            Next Step
+                            <span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+</main>
+</body></html>

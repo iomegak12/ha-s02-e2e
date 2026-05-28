@@ -1,0 +1,14 @@
+**/bin
+**/obj
+**/.vs
+**/.vscode
+**/.idea
+docs/site
+docs/node_modules
+logs
+*.user
+.git
+.gitignore
+tests
+**/TestResults
+appsettings.*.local.json

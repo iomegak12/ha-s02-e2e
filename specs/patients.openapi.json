@@ -1,0 +1,363 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nexus HA — Patients Service API",
+    "version": "1.0.0",
+    "summary": "Patient master data, lifecycle, and branch associations.",
+    "description": "Manages patient demographics, lifecycle (Draft → Active → Archived), and many-to-many associations with branches. Patients never authenticate. NOTE: per LLD §19 open items, reactivation of an Archived patient is not exposed in this version.",
+    "contact": { "name": "Nexus HA Engineering", "email": "engineering@nexusha.local" },
+    "license": { "name": "Proprietary" }
+  },
+  "servers": [
+    { "url": "http://localhost:5002", "description": "Local development (placeholder port)" },
+    { "url": "https://dev.api.nexusha.local/patients", "description": "Dev environment" },
+    { "url": "https://api.nexusha.local/patients", "description": "Production" }
+  ],
+  "tags": [
+    { "name": "Patients", "description": "Patient CRUD." },
+    { "name": "PatientLifecycle", "description": "Patient state transitions." },
+    { "name": "PatientBranches", "description": "Patient ↔ Branch associations." }
+  ],
+  "security": [ { "bearerAuth": [] } ],
+  "paths": {
+    "/api/v1/patients": {
+      "get": {
+        "tags": ["Patients"],
+        "operationId": "listPatients",
+        "summary": "List patients",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/PatientStatus" } },
+          { "name": "branchId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Free-text search across name and public code." },
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/SizeParam" },
+          { "$ref": "#/components/parameters/SortParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged list of patients.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedPatient" },
+                "example": {
+                  "page": 1, "size": 20, "totalCount": 1,
+                  "items": [ {
+                    "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70",
+                    "code": "PAT-2026-BLR-000012",
+                    "firstName": "Meera", "lastName": "Iyer",
+                    "dateOfBirth": "1988-03-14", "gender": "Female",
+                    "primaryPhone": "+91-9900112233", "email": "meera.iyer@example.com",
+                    "status": "Active", "primaryBranchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80",
+                    "createdAtUtc": "2026-05-27T09:00:00Z", "updatedAtUtc": "2026-05-27T09:15:42Z"
+                  } ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      },
+      "post": {
+        "tags": ["Patients"],
+        "operationId": "createPatient",
+        "summary": "Create a patient (Draft)",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PatientCreate" },
+              "example": {
+                "firstName": "Meera", "lastName": "Iyer",
+                "dateOfBirth": "1988-03-14", "gender": "Female",
+                "primaryPhone": "+91-9900112233", "email": "meera.iyer@example.com",
+                "addressLine1": "12, MG Road", "city": "Bengaluru", "state": "KA", "postalCode": "560001", "country": "IN",
+                "primaryBranchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Patient created in Draft state.",
+            "headers": { "Location": { "schema": { "type": "string" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Patient" }, "example": {
+              "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "code": "PAT-2026-BLR-000012",
+              "firstName": "Meera", "lastName": "Iyer", "dateOfBirth": "1988-03-14", "gender": "Female",
+              "primaryPhone": "+91-9900112233", "email": "meera.iyer@example.com",
+              "addressLine1": "12, MG Road", "city": "Bengaluru", "state": "KA", "postalCode": "560001", "country": "IN",
+              "status": "Draft", "primaryBranchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80",
+              "createdAtUtc": "2026-05-27T09:00:00Z", "updatedAtUtc": "2026-05-27T09:00:00Z"
+            } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "409": {
+            "description": "Duplicate identity (phone+DOB or email+DOB collision).",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": {
+              "type": "https://errors.nexusha.local/duplicate-identity", "title": "Conflict", "status": 409,
+              "code": "DUPLICATE_IDENTITY", "detail": "A patient with the same phone and date of birth already exists.",
+              "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01"
+            } } }
+          },
+          "422": {
+            "description": "Validation failed, including unknown branch reference.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "examples": {
+              "validation": { "value": { "type": "https://errors.nexusha.local/validation", "title": "Validation failed", "status": 422, "code": "PATIENT_VALIDATION", "detail": "One or more fields are invalid.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "dateOfBirth", "message": "Cannot be in the future." } ] } },
+              "branchUnknown": { "value": { "type": "https://errors.nexusha.local/branch-unknown", "title": "Validation failed", "status": 422, "code": "BRANCH_UNKNOWN", "detail": "primaryBranchId does not refer to an active branch.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "primaryBranchId", "message": "Branch not found or inactive." } ] } }
+            } } }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited429" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable503" }
+        }
+      }
+    },
+    "/api/v1/patients/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get": {
+        "tags": ["Patients"],
+        "operationId": "getPatientById",
+        "summary": "Get patient by id",
+        "responses": {
+          "200": { "description": "Patient found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Patient" }, "example": {
+            "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "code": "PAT-2026-BLR-000012",
+            "firstName": "Meera", "lastName": "Iyer", "dateOfBirth": "1988-03-14", "gender": "Female",
+            "primaryPhone": "+91-9900112233", "email": "meera.iyer@example.com",
+            "addressLine1": "12, MG Road", "city": "Bengaluru", "state": "KA", "postalCode": "560001", "country": "IN",
+            "status": "Active", "primaryBranchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80",
+            "createdAtUtc": "2026-05-27T09:00:00Z", "updatedAtUtc": "2026-05-27T09:15:42Z"
+          } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }
+        }
+      },
+      "patch": {
+        "tags": ["Patients"],
+        "operationId": "patchPatient",
+        "summary": "Partially update a patient",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdempotencyKeyHeader" },
+          { "$ref": "#/components/parameters/IfMatchETag" }
+        ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PatientPatch" }, "example": { "primaryPhone": "+91-9988776655", "addressLine2": "Apt 4B" } } } },
+        "responses": {
+          "200": { "description": "Patient updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Patient" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": { "$ref": "#/components/responses/Conflict409ETag" },
+          "422": { "$ref": "#/components/responses/Validation422" }
+        }
+      }
+    },
+    "/api/v1/patients/{id}/activate": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "post": {
+        "tags": ["PatientLifecycle"],
+        "operationId": "activatePatient",
+        "summary": "Transition patient Draft → Active",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "200": { "description": "Patient activated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Patient" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": { "$ref": "#/components/responses/LifecycleConflict409" }
+        }
+      }
+    },
+    "/api/v1/patients/{id}/archive": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "post": {
+        "tags": ["PatientLifecycle"],
+        "operationId": "archivePatient",
+        "summary": "Transition patient Active → Archived",
+        "description": "Per LLD §19, reactivating an Archived patient is intentionally not exposed in this version.",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "200": { "description": "Patient archived.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Patient" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": { "$ref": "#/components/responses/LifecycleConflict409" }
+        }
+      }
+    },
+    "/api/v1/patients/{id}/branches": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get": {
+        "tags": ["PatientBranches"],
+        "operationId": "listPatientBranches",
+        "summary": "List branches associated with a patient",
+        "responses": {
+          "200": { "description": "Associations listed.", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/PatientBranchLink" } }, "example": [ { "branchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80", "branchCode": "BR-BLR-001", "isPrimary": true, "linkedAtUtc": "2026-05-27T09:00:00Z" } ] } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }
+        }
+      },
+      "post": {
+        "tags": ["PatientBranches"],
+        "operationId": "linkPatientToBranch",
+        "summary": "Associate a patient with a branch",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PatientBranchLinkRequest" }, "example": { "branchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f81", "isPrimary": false } } } },
+        "responses": {
+          "201": { "description": "Association created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PatientBranchLink" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": {
+            "description": "Already linked to this branch.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/already-linked", "title": "Conflict", "status": 409, "code": "ALREADY_LINKED", "detail": "Patient is already linked to this branch.", "instance": "/api/v1/patients/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70/branches", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+          },
+          "422": {
+            "description": "Unknown or inactive branch.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/branch-unknown", "title": "Validation failed", "status": 422, "code": "BRANCH_UNKNOWN", "detail": "branchId does not refer to an active branch.", "instance": "/api/v1/patients/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70/branches", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+          },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable503" }
+        }
+      }
+    },
+    "/api/v1/patients/{id}/branches/{branchId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/IdPathParam" },
+        { "name": "branchId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "delete": {
+        "tags": ["PatientBranches"],
+        "operationId": "unlinkPatientFromBranch",
+        "summary": "Remove a patient ↔ branch association",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "204": { "description": "Association removed (idempotent)." },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": {
+            "description": "Cannot remove the primary branch link without first reassigning the primary.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/primary-branch-required", "title": "Conflict", "status": 409, "code": "PRIMARY_BRANCH_REQUIRED", "detail": "Reassign the primary branch before unlinking this one.", "instance": "/api/v1/patients/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70/branches/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" } },
+    "parameters": {
+      "PageParam": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+      "SizeParam": { "name": "size", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } },
+      "SortParam": { "name": "sort", "in": "query", "schema": { "type": "string" }, "description": "Sort expression, e.g. `lastName:asc`." },
+      "IdempotencyKeyHeader": { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" } },
+      "IfMatchETag": { "name": "If-Match", "in": "header", "required": false, "schema": { "type": "string" } },
+      "IdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+    },
+    "responses": {
+      "BadRequest400": { "description": "Malformed request.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/bad-request", "title": "Bad Request", "status": 400, "code": "BAD_REQUEST", "detail": "Request body could not be parsed.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Unauthorized401": { "description": "Missing or invalid bearer token.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Unauthorized", "status": 401, "code": "UNAUTHENTICATED", "detail": "Bearer token is missing or invalid.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Forbidden403": { "description": "Authenticated but not permitted.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Forbidden", "status": 403, "code": "UNAUTHORIZED", "detail": "Admin role required.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "NotFound404": { "description": "Patient not found.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/not-found", "title": "Not Found", "status": 404, "code": "NOT_FOUND", "detail": "Patient was not found.", "instance": "/api/v1/patients/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Conflict409ETag": { "description": "Optimistic concurrency conflict (If-Match mismatch).", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/etag-mismatch", "title": "Conflict", "status": 409, "code": "ETAG_MISMATCH", "detail": "If-Match header does not match current resource version.", "instance": "/api/v1/patients/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "LifecycleConflict409": { "description": "Invalid state transition.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/lifecycle", "title": "Conflict", "status": 409, "code": "LIFECYCLE_INVALID_TRANSITION", "detail": "Cannot transition from Archived to Active.", "instance": "/api/v1/patients/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f70/activate", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Validation422": { "description": "Validation failed.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/validation", "title": "Validation failed", "status": 422, "code": "PATIENT_VALIDATION", "detail": "One or more fields are invalid.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "email", "message": "Invalid email format." } ] } } } },
+      "RateLimited429": { "description": "Too many requests.", "headers": { "Retry-After": { "schema": { "type": "integer" } } }, "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/rate-limited", "title": "Too Many Requests", "status": 429, "code": "RATE_LIMITED", "detail": "Request rate exceeded.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "DependencyUnavailable503": { "description": "An upstream dependency (e.g. Branches service) is unavailable.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/dependency-unavailable", "title": "Service Unavailable", "status": 503, "code": "DEPENDENCY_UNAVAILABLE", "detail": "Branches service is temporarily unavailable.", "instance": "/api/v1/patients", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "description": "RFC 9457 Problem Details with Nexus HA extensions.",
+        "properties": {
+          "type": { "type": "string", "format": "uri" }, "title": { "type": "string" }, "status": { "type": "integer" },
+          "detail": { "type": "string" }, "instance": { "type": "string" }, "code": { "type": "string" }, "traceId": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "object", "properties": { "field": { "type": "string" }, "message": { "type": "string" } }, "required": ["field", "message"] } }
+        },
+        "required": ["type", "title", "status"]
+      },
+      "PatientStatus": { "type": "string", "enum": ["Draft", "Active", "Archived"] },
+      "Gender": { "type": "string", "enum": ["Male", "Female", "Other", "Unknown"] },
+      "PatientCore": {
+        "type": "object",
+        "properties": {
+          "firstName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "lastName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "dateOfBirth": { "type": "string", "format": "date" },
+          "gender": { "$ref": "#/components/schemas/Gender" },
+          "primaryPhone": { "type": "string", "maxLength": 32 },
+          "email": { "type": ["string", "null"], "format": "email", "maxLength": 256 },
+          "addressLine1": { "type": "string", "maxLength": 200 },
+          "addressLine2": { "type": ["string", "null"], "maxLength": 200 },
+          "city": { "type": "string", "maxLength": 100 },
+          "state": { "type": "string", "maxLength": 100 },
+          "postalCode": { "type": "string", "maxLength": 20 },
+          "country": { "type": "string", "minLength": 2, "maxLength": 2, "description": "ISO 3166-1 alpha-2." }
+        }
+      },
+      "PatientCreate": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PatientCore" },
+          { "type": "object", "properties": { "primaryBranchId": { "type": "string", "format": "uuid" } }, "required": ["primaryBranchId"] }
+        ],
+        "required": ["firstName", "lastName", "dateOfBirth", "gender", "primaryPhone", "addressLine1", "city", "state", "postalCode", "country", "primaryBranchId"]
+      },
+      "PatientPatch": {
+        "type": "object",
+        "properties": {
+          "firstName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "lastName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "primaryPhone": { "type": "string", "maxLength": 32 },
+          "email": { "type": ["string", "null"], "format": "email" },
+          "addressLine1": { "type": "string" }, "addressLine2": { "type": ["string", "null"] },
+          "city": { "type": "string" }, "state": { "type": "string" }, "postalCode": { "type": "string" }, "country": { "type": "string", "minLength": 2, "maxLength": 2 },
+          "primaryBranchId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "Patient": {
+        "allOf": [
+          { "$ref": "#/components/schemas/PatientCore" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "code": { "type": "string", "description": "Public code, e.g. PAT-2026-BLR-000012.", "pattern": "^PAT-\\d{4}-[A-Z]{3}-\\d{6}$" },
+              "status": { "$ref": "#/components/schemas/PatientStatus" },
+              "primaryBranchId": { "type": "string", "format": "uuid" },
+              "createdAtUtc": { "type": "string", "format": "date-time" },
+              "updatedAtUtc": { "type": "string", "format": "date-time" }
+            },
+            "required": ["id", "code", "status", "primaryBranchId", "createdAtUtc", "updatedAtUtc"]
+          }
+        ]
+      },
+      "PagedPatient": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" }, "size": { "type": "integer" }, "totalCount": { "type": "integer" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Patient" } }
+        },
+        "required": ["page", "size", "totalCount", "items"]
+      },
+      "PatientBranchLinkRequest": {
+        "type": "object",
+        "properties": { "branchId": { "type": "string", "format": "uuid" }, "isPrimary": { "type": "boolean", "default": false } },
+        "required": ["branchId"]
+      },
+      "PatientBranchLink": {
+        "type": "object",
+        "properties": {
+          "branchId": { "type": "string", "format": "uuid" },
+          "branchCode": { "type": "string" },
+          "isPrimary": { "type": "boolean" },
+          "linkedAtUtc": { "type": "string", "format": "date-time" }
+        },
+        "required": ["branchId", "isPrimary", "linkedAtUtc"]
+      }
+    }
+  }
+}

@@ -1,0 +1,397 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nexus HA — Doctors Service API",
+    "version": "1.0.0",
+    "summary": "Doctor master data, document verification workflow, lifecycle, and branch associations.",
+    "description": "Manages doctors (Pending → Verified → Approved → Active → Deactivated), credential documents, and branch associations. Doctors never authenticate. NOTE: per LLD §19 open items, document storage paths are modeled as opaque strings; concrete storage backend is provider-specific.",
+    "contact": { "name": "Nexus HA Engineering", "email": "engineering@nexusha.local" },
+    "license": { "name": "Proprietary" }
+  },
+  "servers": [
+    { "url": "http://localhost:5003", "description": "Local development (placeholder port)" },
+    { "url": "https://dev.api.nexusha.local/doctors", "description": "Dev environment" },
+    { "url": "https://api.nexusha.local/doctors", "description": "Production" }
+  ],
+  "tags": [
+    { "name": "Doctors", "description": "Doctor CRUD." },
+    { "name": "DoctorLifecycle", "description": "Doctor state transitions (verify, approve, activate, deactivate)." },
+    { "name": "DoctorDocuments", "description": "Credential document upload and review." },
+    { "name": "DoctorBranches", "description": "Doctor ↔ Branch associations." }
+  ],
+  "security": [ { "bearerAuth": [] } ],
+  "paths": {
+    "/api/v1/doctors": {
+      "get": {
+        "tags": ["Doctors"], "operationId": "listDoctors", "summary": "List doctors",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/DoctorStatus" } },
+          { "name": "branchId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "specialty", "in": "query", "schema": { "type": "string" } },
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "$ref": "#/components/parameters/PageParam" }, { "$ref": "#/components/parameters/SizeParam" }, { "$ref": "#/components/parameters/SortParam" }
+        ],
+        "responses": {
+          "200": { "description": "Paged list of doctors.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedDoctor" }, "example": {
+            "page": 1, "size": 20, "totalCount": 1,
+            "items": [ { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f90", "code": "DOC-2026-BLR-000007", "firstName": "Vivek", "lastName": "Rao", "specialty": "Cardiology", "licenseNumber": "KMC-12345", "primaryPhone": "+91-9911223344", "email": "v.rao@nexusha.local", "status": "Active", "primaryBranchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80", "createdAtUtc": "2026-04-10T08:00:00Z", "updatedAtUtc": "2026-05-20T10:30:00Z" } ]
+          } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "429": { "$ref": "#/components/responses/RateLimited429" }
+        }
+      },
+      "post": {
+        "tags": ["Doctors"], "operationId": "createDoctor", "summary": "Create a doctor (Pending)",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DoctorCreate" }, "example": {
+          "firstName": "Vivek", "lastName": "Rao", "specialty": "Cardiology", "licenseNumber": "KMC-12345",
+          "primaryPhone": "+91-9911223344", "email": "v.rao@nexusha.local", "primaryBranchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80"
+        } } } },
+        "responses": {
+          "201": { "description": "Doctor created in Pending state.", "headers": { "Location": { "schema": { "type": "string" } } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Doctor" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "409": {
+            "description": "Duplicate license number or duplicate identity.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/duplicate-identity", "title": "Conflict", "status": 409, "code": "DUPLICATE_LICENSE", "detail": "A doctor with this license number already exists.", "instance": "/api/v1/doctors", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+          },
+          "422": {
+            "description": "Validation failed, including unknown branch reference.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "examples": {
+              "validation": { "value": { "type": "https://errors.nexusha.local/validation", "title": "Validation failed", "status": 422, "code": "DOCTOR_VALIDATION", "detail": "One or more fields are invalid.", "instance": "/api/v1/doctors", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "licenseNumber", "message": "Required." } ] } },
+              "branchUnknown": { "value": { "type": "https://errors.nexusha.local/branch-unknown", "title": "Validation failed", "status": 422, "code": "BRANCH_UNKNOWN", "detail": "primaryBranchId does not refer to an active branch.", "instance": "/api/v1/doctors", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "primaryBranchId", "message": "Branch not found or inactive." } ] } }
+            } } }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited429" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable503" }
+        }
+      }
+    },
+    "/api/v1/doctors/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get": {
+        "tags": ["Doctors"], "operationId": "getDoctorById", "summary": "Get doctor by id",
+        "responses": {
+          "200": { "description": "Doctor found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Doctor" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }
+        }
+      },
+      "patch": {
+        "tags": ["Doctors"], "operationId": "patchDoctor", "summary": "Partially update a doctor",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" }, { "$ref": "#/components/parameters/IfMatchETag" } ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DoctorPatch" }, "example": { "primaryPhone": "+91-9911223399", "specialty": "Interventional Cardiology" } } } },
+        "responses": {
+          "200": { "description": "Doctor updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Doctor" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": { "$ref": "#/components/responses/Conflict409ETag" },
+          "422": { "$ref": "#/components/responses/Validation422" }
+        }
+      }
+    },
+    "/api/v1/doctors/{id}/verify": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "post": {
+        "tags": ["DoctorLifecycle"], "operationId": "verifyDoctor", "summary": "Pending → Verified (all required documents Verified)",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "200": { "description": "Doctor verified.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Doctor" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }
+        }
+      }
+    },
+    "/api/v1/doctors/{id}/approve": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "post": {
+        "tags": ["DoctorLifecycle"], "operationId": "approveDoctor", "summary": "Verified → Approved",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "200": { "description": "Doctor approved.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Doctor" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }
+        }
+      }
+    },
+    "/api/v1/doctors/{id}/activate": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "post": {
+        "tags": ["DoctorLifecycle"], "operationId": "activateDoctor", "summary": "Approved → Active",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "200": { "description": "Doctor activated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Doctor" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }
+        }
+      }
+    },
+    "/api/v1/doctors/{id}/deactivate": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "post": {
+        "tags": ["DoctorLifecycle"], "operationId": "deactivateDoctor", "summary": "Active → Deactivated",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "type": "object", "properties": { "reason": { "type": "string", "maxLength": 500 } } }, "example": { "reason": "Resigned." } } } },
+        "responses": {
+          "200": { "description": "Doctor deactivated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Doctor" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }, "409": { "$ref": "#/components/responses/LifecycleConflict409" }
+        }
+      }
+    },
+    "/api/v1/doctors/{id}/documents": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get": {
+        "tags": ["DoctorDocuments"], "operationId": "listDoctorDocuments", "summary": "List credential documents",
+        "responses": {
+          "200": { "description": "Documents listed.", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Document" } }, "example": [ { "id": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5fa0", "kind": "MedicalLicense", "fileName": "kmc-12345.pdf", "contentType": "application/pdf", "sizeBytes": 153214, "status": "Verified", "uploadedAtUtc": "2026-04-11T09:30:00Z", "reviewedAtUtc": "2026-04-12T11:00:00Z", "storagePath": "doctors/0a9f6c81/medical-license/kmc-12345.pdf" } ] } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" }
+        }
+      },
+      "post": {
+        "tags": ["DoctorDocuments"], "operationId": "uploadDoctorDocument", "summary": "Upload a credential document (multipart)",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": { "$ref": "#/components/schemas/DocumentKind" },
+                  "file": { "type": "string", "format": "binary" }
+                },
+                "required": ["kind", "file"]
+              },
+              "encoding": { "file": { "contentType": "application/pdf, image/png, image/jpeg" } }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Document uploaded (status=Uploaded).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Document" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" },
+          "404": { "$ref": "#/components/responses/NotFound404" },
+          "413": {
+            "description": "Payload too large.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/payload-too-large", "title": "Payload Too Large", "status": 413, "code": "FILE_TOO_LARGE", "detail": "File exceeds the 10MB limit.", "instance": "/api/v1/doctors/0a9f6c81/documents", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+          },
+          "415": {
+            "description": "Unsupported media type.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unsupported-media", "title": "Unsupported Media Type", "status": 415, "code": "UNSUPPORTED_MEDIA", "detail": "Only PDF, PNG, JPEG are accepted.", "instance": "/api/v1/doctors/0a9f6c81/documents", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+          },
+          "422": { "$ref": "#/components/responses/Validation422" }
+        }
+      }
+    },
+    "/api/v1/doctors/{id}/documents/{docId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/IdPathParam" },
+        { "name": "docId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "get": {
+        "tags": ["DoctorDocuments"], "operationId": "getDoctorDocument", "summary": "Get document metadata",
+        "responses": {
+          "200": { "description": "Document metadata.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Document" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }
+        }
+      },
+      "patch": {
+        "tags": ["DoctorDocuments"], "operationId": "reviewDoctorDocument", "summary": "Review document (Verified or Rejected)",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DocumentReview" }, "example": { "status": "Verified" } } } },
+        "responses": {
+          "200": { "description": "Document review recorded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Document" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest400" }, "401": { "$ref": "#/components/responses/Unauthorized401" },
+          "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": { "$ref": "#/components/responses/LifecycleConflict409" },
+          "422": { "$ref": "#/components/responses/Validation422" }
+        }
+      },
+      "delete": {
+        "tags": ["DoctorDocuments"], "operationId": "deleteDoctorDocument", "summary": "Remove a document (soft delete, before verification)",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "204": { "description": "Document removed." },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": {
+            "description": "Cannot delete a verified document.",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/lifecycle", "title": "Conflict", "status": 409, "code": "DOCUMENT_LOCKED", "detail": "Verified documents cannot be removed.", "instance": "/api/v1/doctors/0a9f6c81/documents/0a9f6c82", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/doctors/{id}/branches": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPathParam" } ],
+      "get": {
+        "tags": ["DoctorBranches"], "operationId": "listDoctorBranches", "summary": "List branches associated with a doctor",
+        "responses": {
+          "200": { "description": "Associations listed.", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/DoctorBranchLink" } }, "example": [ { "branchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80", "branchCode": "BR-BLR-001", "isPrimary": true, "linkedAtUtc": "2026-04-15T10:00:00Z" } ] } } },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" }
+        }
+      },
+      "post": {
+        "tags": ["DoctorBranches"], "operationId": "linkDoctorToBranch", "summary": "Associate a doctor with a branch",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DoctorBranchLinkRequest" }, "example": { "branchId": "0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f81", "isPrimary": false } } } },
+        "responses": {
+          "201": { "description": "Association created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DoctorBranchLink" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest400" },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": { "description": "Already linked to this branch.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/already-linked", "title": "Conflict", "status": 409, "code": "ALREADY_LINKED", "detail": "Doctor is already linked to this branch.", "instance": "/api/v1/doctors/0a9f6c81/branches", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+          "422": { "description": "Unknown or inactive branch.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/branch-unknown", "title": "Validation failed", "status": 422, "code": "BRANCH_UNKNOWN", "detail": "branchId does not refer to an active branch.", "instance": "/api/v1/doctors/0a9f6c81/branches", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable503" }
+        }
+      }
+    },
+    "/api/v1/doctors/{id}/branches/{branchId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/IdPathParam" },
+        { "name": "branchId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "delete": {
+        "tags": ["DoctorBranches"], "operationId": "unlinkDoctorFromBranch", "summary": "Remove a doctor ↔ branch association",
+        "parameters": [ { "$ref": "#/components/parameters/IdempotencyKeyHeader" } ],
+        "responses": {
+          "204": { "description": "Association removed (idempotent)." },
+          "401": { "$ref": "#/components/responses/Unauthorized401" }, "403": { "$ref": "#/components/responses/Forbidden403" }, "404": { "$ref": "#/components/responses/NotFound404" },
+          "409": { "description": "Cannot remove the primary branch link without first reassigning the primary.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/primary-branch-required", "title": "Conflict", "status": 409, "code": "PRIMARY_BRANCH_REQUIRED", "detail": "Reassign the primary branch before unlinking this one.", "instance": "/api/v1/doctors/0a9f6c81/branches/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f80", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": { "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" } },
+    "parameters": {
+      "PageParam": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+      "SizeParam": { "name": "size", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } },
+      "SortParam": { "name": "sort", "in": "query", "schema": { "type": "string" }, "description": "Sort expression, e.g. `lastName:asc`." },
+      "IdempotencyKeyHeader": { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string", "format": "uuid" } },
+      "IfMatchETag": { "name": "If-Match", "in": "header", "required": false, "schema": { "type": "string" } },
+      "IdPathParam": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+    },
+    "responses": {
+      "BadRequest400": { "description": "Malformed request.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/bad-request", "title": "Bad Request", "status": 400, "code": "BAD_REQUEST", "detail": "Request body could not be parsed.", "instance": "/api/v1/doctors", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Unauthorized401": { "description": "Missing or invalid bearer token.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Unauthorized", "status": 401, "code": "UNAUTHENTICATED", "detail": "Bearer token is missing or invalid.", "instance": "/api/v1/doctors", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Forbidden403": { "description": "Authenticated but not permitted.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/unauthorized", "title": "Forbidden", "status": 403, "code": "UNAUTHORIZED", "detail": "Admin role required.", "instance": "/api/v1/doctors", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "NotFound404": { "description": "Doctor or document not found.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/not-found", "title": "Not Found", "status": 404, "code": "NOT_FOUND", "detail": "Doctor was not found.", "instance": "/api/v1/doctors/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f90", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Conflict409ETag": { "description": "Optimistic concurrency conflict (If-Match mismatch).", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/etag-mismatch", "title": "Conflict", "status": 409, "code": "ETAG_MISMATCH", "detail": "If-Match header does not match current resource version.", "instance": "/api/v1/doctors/0a9f6c81-2c2b-7b21-8f6b-3a1c2d4e5f90", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "LifecycleConflict409": { "description": "Invalid state transition.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/lifecycle", "title": "Conflict", "status": 409, "code": "LIFECYCLE_INVALID_TRANSITION", "detail": "Cannot approve a doctor that is not Verified.", "instance": "/api/v1/doctors/0a9f6c81/approve", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "Validation422": { "description": "Validation failed.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/validation", "title": "Validation failed", "status": 422, "code": "DOCTOR_VALIDATION", "detail": "One or more fields are invalid.", "instance": "/api/v1/doctors", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01", "errors": [ { "field": "email", "message": "Invalid email format." } ] } } } },
+      "RateLimited429": { "description": "Too many requests.", "headers": { "Retry-After": { "schema": { "type": "integer" } } }, "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/rate-limited", "title": "Too Many Requests", "status": 429, "code": "RATE_LIMITED", "detail": "Request rate exceeded.", "instance": "/api/v1/doctors", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } },
+      "DependencyUnavailable503": { "description": "An upstream dependency (e.g. Branches service) is unavailable.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" }, "example": { "type": "https://errors.nexusha.local/dependency-unavailable", "title": "Service Unavailable", "status": 503, "code": "DEPENDENCY_UNAVAILABLE", "detail": "Branches service is temporarily unavailable.", "instance": "/api/v1/doctors", "traceId": "00-aaaabbbbccccddddeeeeffff00001111-2222333344445555-01" } } } }
+    },
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "description": "RFC 9457 Problem Details with Nexus HA extensions.",
+        "properties": {
+          "type": { "type": "string", "format": "uri" }, "title": { "type": "string" }, "status": { "type": "integer" },
+          "detail": { "type": "string" }, "instance": { "type": "string" }, "code": { "type": "string" }, "traceId": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "object", "properties": { "field": { "type": "string" }, "message": { "type": "string" } }, "required": ["field", "message"] } }
+        },
+        "required": ["type", "title", "status"]
+      },
+      "DoctorStatus": { "type": "string", "enum": ["Pending", "Verified", "Approved", "Active", "Deactivated"] },
+      "DocumentStatus": { "type": "string", "enum": ["Uploaded", "Verified", "Rejected"] },
+      "DocumentKind": { "type": "string", "enum": ["MedicalLicense", "BoardCertification", "GovernmentId", "ProofOfAddress", "Other"] },
+      "DoctorCore": {
+        "type": "object",
+        "properties": {
+          "firstName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "lastName": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "specialty": { "type": "string", "maxLength": 100 },
+          "licenseNumber": { "type": "string", "maxLength": 64 },
+          "primaryPhone": { "type": "string", "maxLength": 32 },
+          "email": { "type": ["string", "null"], "format": "email", "maxLength": 256 }
+        }
+      },
+      "DoctorCreate": {
+        "allOf": [
+          { "$ref": "#/components/schemas/DoctorCore" },
+          { "type": "object", "properties": { "primaryBranchId": { "type": "string", "format": "uuid" } }, "required": ["primaryBranchId"] }
+        ],
+        "required": ["firstName", "lastName", "specialty", "licenseNumber", "primaryPhone", "primaryBranchId"]
+      },
+      "DoctorPatch": {
+        "type": "object",
+        "properties": {
+          "firstName": { "type": "string" }, "lastName": { "type": "string" }, "specialty": { "type": "string" },
+          "primaryPhone": { "type": "string" }, "email": { "type": ["string", "null"], "format": "email" },
+          "primaryBranchId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "Doctor": {
+        "allOf": [
+          { "$ref": "#/components/schemas/DoctorCore" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "code": { "type": "string", "description": "Public code, e.g. DOC-2026-BLR-000007.", "pattern": "^DOC-\\d{4}-[A-Z]{3}-\\d{6}$" },
+              "status": { "$ref": "#/components/schemas/DoctorStatus" },
+              "primaryBranchId": { "type": "string", "format": "uuid" },
+              "createdAtUtc": { "type": "string", "format": "date-time" },
+              "updatedAtUtc": { "type": "string", "format": "date-time" }
+            },
+            "required": ["id", "code", "status", "primaryBranchId", "createdAtUtc", "updatedAtUtc"]
+          }
+        ]
+      },
+      "PagedDoctor": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" }, "size": { "type": "integer" }, "totalCount": { "type": "integer" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Doctor" } }
+        },
+        "required": ["page", "size", "totalCount", "items"]
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "kind": { "$ref": "#/components/schemas/DocumentKind" },
+          "fileName": { "type": "string", "maxLength": 255 },
+          "contentType": { "type": "string" },
+          "sizeBytes": { "type": "integer", "minimum": 0 },
+          "status": { "$ref": "#/components/schemas/DocumentStatus" },
+          "uploadedAtUtc": { "type": "string", "format": "date-time" },
+          "reviewedAtUtc": { "type": ["string", "null"], "format": "date-time" },
+          "reviewerId": { "type": ["string", "null"], "format": "uuid" },
+          "rejectionReason": { "type": ["string", "null"], "maxLength": 500 },
+          "storagePath": { "type": "string", "description": "Opaque, provider-specific storage path (LLD §19 open item)." }
+        },
+        "required": ["id", "kind", "fileName", "contentType", "sizeBytes", "status", "uploadedAtUtc", "storagePath"]
+      },
+      "DocumentReview": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["Verified", "Rejected"] },
+          "rejectionReason": { "type": ["string", "null"], "maxLength": 500 }
+        },
+        "required": ["status"]
+      },
+      "DoctorBranchLinkRequest": {
+        "type": "object",
+        "properties": { "branchId": { "type": "string", "format": "uuid" }, "isPrimary": { "type": "boolean", "default": false } },
+        "required": ["branchId"]
+      },
+      "DoctorBranchLink": {
+        "type": "object",
+        "properties": {
+          "branchId": { "type": "string", "format": "uuid" },
+          "branchCode": { "type": "string" },
+          "isPrimary": { "type": "boolean" },
+          "linkedAtUtc": { "type": "string", "format": "date-time" }
+        },
+        "required": ["branchId", "isPrimary", "linkedAtUtc"]
+      }
+    }
+  }
+}
