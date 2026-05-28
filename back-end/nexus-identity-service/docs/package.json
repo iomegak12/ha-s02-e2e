@@ -1,0 +1,13 @@
+{
+  "name": "nexus-identity-service-docs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "docs:build": "redocly build-docs ../../../specs/identity.openapi.json -o site/index.html",
+    "docs:lint": "redocly lint ../../../specs/identity.openapi.json",
+    "docs:preview": "redocly preview-docs ../../../specs/identity.openapi.json"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^1.34.0"
+  }
+}

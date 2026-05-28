@@ -1,0 +1,36 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+
+# Rider
+.idea/
+
+# Coverage
+**/TestResults/
+coverage*.xml
+coverage*.json
+*.coverage
+*.coveragexml
+
+# Logs
+logs/
+*.log
+
+# Local config overrides
+appsettings.*.local.json
+
+# Docs static output
+docs/site/
+docs/node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

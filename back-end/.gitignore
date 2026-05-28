@@ -1,0 +1,11 @@
+# Local secrets / env overlays — never commit
+.env
+.env.local
+*.env.local
+
+# Docs static output
+docs/site/
+
+# OS junk
+.DS_Store
+Thumbs.db

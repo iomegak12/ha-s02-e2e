@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: nexus-ha-local
+    env: docker-compose
+
+scrape_configs:
+  # OTel collector — exposes Prometheus exposition of OTLP-received metrics
+  - job_name: otel-collector
+    static_configs:
+      - targets: ['otel-collector:8889']
+
+  # OTel collector internal telemetry (its own /metrics)
+  - job_name: otel-collector-internal
+    static_configs:
+      - targets: ['otel-collector:8888']
+
+  # Identity service — its own Prometheus exporter
+  - job_name: nexus-identity
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['nexus-identity-service:8000']
+
+  # Audit service — its own Prometheus exporter
+  - job_name: nexus-audit
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['nexus-audit-service:12000']

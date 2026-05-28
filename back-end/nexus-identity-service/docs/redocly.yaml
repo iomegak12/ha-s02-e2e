@@ -1,0 +1,4 @@
+extends: [recommended]
+apis:
+  identity@v1:
+    root: ../../../specs/identity.openapi.json

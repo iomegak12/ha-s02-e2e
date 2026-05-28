@@ -1,0 +1,4 @@
+extends: [recommended]
+apis:
+  audit@v1:
+    root: ../../../specs/audit.openapi.json
