@@ -1,0 +1,263 @@
+@page "/login"
+@layout EmptyLayout
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Login | Nexus HA Clinical Admin</PageTitle>
+
+<style>
+    .carousel-item {
+        opacity: 0;
+        transition: opacity 0.8s ease-in-out;
+        position: absolute;
+        inset: 0;
+    }
+    .carousel-item.active {
+        opacity: 1;
+        z-index: 10;
+    }
+    .glass-overlay {
+        background: linear-gradient(to right, rgba(53, 37, 205, 0.4), rgba(53, 37, 205, 0.1));
+        backdrop-filter: blur(2px);
+    }
+</style>
+
+<main class="flex min-h-screen">
+
+    <!-- ── Left side: Login form (40%) ──────────────────────────────────── -->
+    <section class="w-full md:w-[40%] bg-surface flex flex-col justify-center px-12 lg:px-24 xl:px-32 z-20">
+
+        <div class="mb-12">
+            <!-- Brand -->
+            <div class="flex items-center gap-2 mb-8">
+                <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                    <span class="material-symbols-outlined text-on-primary text-2xl"
+                          style="font-variation-settings: 'FILL' 1;">medical_services</span>
+                </div>
+                <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">Nexus HA</span>
+            </div>
+            <h1 class="font-display-lg text-display-lg text-on-surface mb-2">Welcome Back</h1>
+            <p class="font-body-base text-body-base text-on-surface-variant">Sign in to access your clinical dashboard</p>
+        </div>
+
+        <!-- Error banner -->
+        @if (_errorMessage is not null)
+        {
+            <div class="mb-4 px-4 py-3 rounded-lg bg-error-container text-on-error-container text-body-sm flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">error</span>
+                <span>@_errorMessage</span>
+            </div>
+        }
+
+        <!-- Login form -->
+        <EditForm Model="@_model" OnValidSubmit="HandleLogin" FormName="login">
+            <DataAnnotationsValidator />
+            <div class="space-y-6">
+
+                <div>
+                    <label class="block font-label-bold text-label-bold text-on-surface-variant mb-2"
+                           for="username">Username/Email</label>
+                    <InputText id="username"
+                               @bind-Value="_model.Username"
+                               placeholder="admin@nexusha.com"
+                               autocomplete="username"
+                               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-outline/50" />
+                    <ValidationMessage For="@(() => _model.Username)"
+                                       class="mt-1 text-error text-body-sm" />
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block font-label-bold text-label-bold text-on-surface-variant"
+                               for="password">Password</label>
+                        <a class="font-label-bold text-label-bold text-primary hover:underline" href="#">
+                            Forgot password?
+                        </a>
+                    </div>
+                    <InputText id="password"
+                               type="password"
+                               @bind-Value="_model.Password"
+                               placeholder="••••••••"
+                               autocomplete="current-password"
+                               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-outline/50" />
+                    <ValidationMessage For="@(() => _model.Password)"
+                                       class="mt-1 text-error text-body-sm" />
+                </div>
+
+                <div class="flex items-center">
+                    <input id="remember" type="checkbox"
+                           @bind="_rememberMe"
+                           class="w-4 h-4 text-primary border-outline-variant rounded focus:ring-primary" />
+                    <label class="ml-2 font-body-base text-body-base text-on-surface-variant select-none"
+                           for="remember">Remember Me</label>
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit"
+                            disabled="@_isSubmitting"
+                            class="flex-1 bg-primary hover:bg-primary/90 text-on-primary font-medium py-3 rounded-lg transition-all active:scale-[0.98] shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        @if (_isSubmitting)
+                        {
+                            <div class="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin"></div>
+                        }
+                        <span>Sign In</span>
+                    </button>
+
+                    <!-- Load Demo Credentials (SVG icon only) -->
+                    <button type="button"
+                            @onclick="LoadDemoCredentials"
+                            title="Load demo credentials (admin / NexusHA_2026!)"
+                            class="px-3 bg-surface-container-low border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-all active:scale-[0.98] flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                            <path fill-rule="evenodd" d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.268a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+
+            </div>
+        </EditForm>
+
+        <footer class="mt-24 pt-8 border-t border-outline-variant">
+            <p class="font-body-sm text-body-sm text-on-surface-variant">
+                © 2024 Nexus HA Clinical Admin. All rights reserved.<br />
+                Secured by HealthAsyst® Digital Engineering.
+            </p>
+        </footer>
+
+    </section>
+
+    <!-- ── Right side: Clinical carousel (60%) ──────────────────────────── -->
+    <section class="hidden md:block md:w-[60%] relative overflow-hidden bg-primary-container">
+
+        <!-- Carousel container -->
+        <div class="h-full w-full relative" id="hero-carousel">
+
+            <!-- Slide 1 -->
+            <div class="carousel-item active bg-cover bg-center"
+                 style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuClFXTM8AWuL5RaqeT0QZqDhxqomlwlCjsWd9oxD2z8KFu2E4DRFrp9ko3v--q1T74izWEWF9dBhf2B0uLt8xFimAGgmrHp4n3Pn2yagS-oYC_DIoaQMdBrsi8EvVG_zD3LLtDbpE7OzmLpNoNMa9PeZXQ3Ek3qSvMtynqy2NOlXBiN0HxbVuKuempMPjeQo4oOfLp8iUY9Dz5VOUsp4jtumFSpjjHZvf5XiBm_bqudiKTVSkljiu8KtAH2xR10vYo90vJ8WlPw0hYp');">
+                <div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+                <div class="absolute inset-0 glass-overlay"></div>
+                <div class="absolute bottom-32 left-16 right-16 z-20">
+                    <h2 class="font-display-lg text-[40px] leading-tight text-white font-bold mb-4 max-w-lg">Reimagine Patient Engagement</h2>
+                    <p class="text-white/90 text-lg max-w-md">Empowering staff with digital tools for seamless intake and workflows.</p>
+                </div>
+            </div>
+
+            <!-- Slide 2 -->
+            <div class="carousel-item bg-cover bg-center"
+                 style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAHOwzk3V8Pu-6aPjHZcOBKiov1s8ayPXwpB9Z5GTMDVUk--k9OjTQVQex_j95PfHCwS3H3nD9Wt208TuPbiftEEQhRytSBIJfr2f9rAEoHzBXyuQFDabTyKrFiGpAYBgiIQ4OqfIspA1oBYXVaWAoD0sdl6FQ6WCz4fT1G1Kya3djtPD3ts13THpVYALIxVUg_LbgTyEYG5fPAojyL1FrTrF4pxxpFMNP_ly6_wmlSTs2AkWzhHDNoITjp5Kizwh_saQUWKi1dSdAz');">
+                <div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+                <div class="absolute inset-0 glass-overlay"></div>
+                <div class="absolute bottom-32 left-16 right-16 z-20">
+                    <h2 class="font-display-lg text-[40px] leading-tight text-white font-bold mb-4 max-w-lg">Future-ready Healthcare Technology</h2>
+                    <p class="text-white/90 text-lg max-w-md">Crafting digital engineering and transformation solutions for modern clinics.</p>
+                </div>
+            </div>
+
+            <!-- Slide 3 -->
+            <div class="carousel-item bg-cover bg-center"
+                 style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBRZUg6FvmerIpvBpNtYHi2mwSHK0BGbqInT40IOgnXBQLOf-D86aSF6ws0JW2ihPjOoETofPsHH40M38-9DGqyaupHNQdyCxxpnEUwjY-vWGv15CyWqE-Ple1LIP6UrvDgMcLGdcQWnXWM_1doxGTpKXOadGEXJqL62VePGXXPo1_Rq9sKDTtmruTtA6oTFTPpByCDZGqNtRqFl_fuuQwC4U8Pffm4ruTplMTwvMyygZESTvudzFZlEYQJ44Cx3Q0e-3013vdFGeAu');">
+                <div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+                <div class="absolute inset-0 glass-overlay"></div>
+                <div class="absolute bottom-32 left-16 right-16 z-20">
+                    <h2 class="font-display-lg text-[40px] leading-tight text-white font-bold mb-4 max-w-lg">CheckinAsyst® Automation</h2>
+                    <p class="text-white/90 text-lg max-w-md">Automate patient intake, payments, and communication with ease.</p>
+                </div>
+            </div>
+
+            <!-- Slide 4 -->
+            <div class="carousel-item bg-cover bg-center"
+                 style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCvABNoFGgwSYPlv4BqG-CE-Z6TB37VY9D8nxHbexVHLXNMnQ5DCRDBG6MIU6eUVYCa5ouTJ98tex8yT_8tbL_z_E2X41qgJsijhQs4WOP1egUZRqben0lsuPn5zgZHjZSsRDEdzhq4b1ZYRCcSA6-fOHMsr7BbG2rpOYz39gFiTkniG1noaic-3oZzhmoJlzV9WTQHQ2RV2diPtcjuy5sQOl6Vq50Is3MRgzDoyHIrBXjoDCAMozIuPWB7cB7ldJW6rcRON8FLzLM1');">
+                <div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+                <div class="absolute inset-0 glass-overlay"></div>
+                <div class="absolute bottom-32 left-16 right-16 z-20">
+                    <h2 class="font-display-lg text-[40px] leading-tight text-white font-bold mb-4 max-w-lg">Great Place to Work-Certified</h2>
+                    <p class="text-white/90 text-lg max-w-md">Proudly recognized for our culture of excellence in healthcare innovation.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Dot navigation -->
+        <div class="absolute bottom-16 left-16 flex gap-3 z-30">
+            @for (int i = 0; i < 4; i++)
+            {
+                var idx = i;
+                <button @onclick="() => ChangeSlide(idx)"
+                        class="@DotClass(idx) w-3 h-3 rounded-full bg-white transition-all"></button>
+            }
+        </div>
+
+        <!-- Decorative background element -->
+        <div class="absolute -top-24 -right-24 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
+
+    </section>
+
+</main>
+
+@code {
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private readonly LoginRequest _model = new();
+    private bool _rememberMe;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+
+    // Carousel state
+    private int _currentSlide = 0;
+    private System.Threading.Timer? _carouselTimer;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _carouselTimer = new System.Threading.Timer(
+                _ => InvokeAsync(() => { ChangeSlide((_currentSlide + 1) % 4); StateHasChanged(); }),
+                null,
+                dueTime: TimeSpan.FromSeconds(5),
+                period: TimeSpan.FromSeconds(5));
+        }
+    }
+
+    private void ChangeSlide(int index)
+    {
+        _currentSlide = index;
+    }
+
+    private string DotClass(int index) =>
+        index == _currentSlide ? "opacity-100" : "opacity-30 hover:opacity-100";
+
+    private async Task HandleLogin()
+    {
+        _isSubmitting = true;
+        _errorMessage = null;
+
+        var result = await AuthService.LoginAsync(_model);
+
+        if (result.IsSuccess)
+        {
+            var returnUrl = ReturnUrl is { Length: > 0 } ? Uri.UnescapeDataString(ReturnUrl) : "/dashboard";
+            Nav.NavigateTo(returnUrl, forceLoad: false);
+        }
+        else
+        {
+            _errorMessage = result.Error?.Detail
+                ?? result.Error?.Title
+                ?? "Invalid username or password. Please try again.";
+        }
+
+        _isSubmitting = false;
+    }
+
+    private void LoadDemoCredentials()
+    {
+        _model.Username = "admin";
+        _model.Password = "NexusHA_2026!";
+    }
+
+    public void Dispose()
+    {
+        _carouselTimer?.Dispose();
+    }
+}

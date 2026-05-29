@@ -1,0 +1,30 @@
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <p class="text-error p-4">You are not authorized to view this page.</p>
+                    }
+                </NotAuthorized>
+                <Authorizing>
+                    <div class="flex items-center justify-center h-screen bg-surface-bg">
+                        <LoadingSpinner />
+                    </div>
+                </Authorizing>
+            </AuthorizeRouteView>
+        </Found>
+        <NotFound>
+            <PageTitle>Not Found — Nexus HA</PageTitle>
+            <LayoutView Layout="@typeof(Layout.MainLayout)">
+                <EmptyState Icon="search_off" Title="Page not found"
+                            Message="The page you are looking for does not exist." />
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

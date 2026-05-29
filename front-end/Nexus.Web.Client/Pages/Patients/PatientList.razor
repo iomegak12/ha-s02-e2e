@@ -1,0 +1,958 @@
+@page "/patients"
+@attribute [Authorize]
+@inject IPatientService PatientService
+@inject IBranchService BranchService
+@inject IJSRuntime JS
+
+<PageTitle>Patients — Nexus HA</PageTitle>
+
+@* ── Page Content ─────────────────────────────────────────────────────────── *@
+<div class="p-margin-page flex-1 flex flex-col max-w-[1400px] mx-auto w-full">
+
+    @* ── Header ──────────────────────────────────────────────────────────── *@
+    <div class="mb-stack-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="font-headline-md text-headline-md text-on-surface">Patients Management</h1>
+            <p class="font-body-base text-body-base text-on-surface-variant mt-1">View and manage clinical records, registrations and lifecycle.</p>
+        </div>
+        <button @onclick="OpenAddWizard"
+                class="flex items-center justify-center gap-2 bg-primary text-on-primary font-label-bold text-label-bold h-10 px-4 rounded-lg hover:bg-primary/90 transition-colors shadow-sm w-full sm:w-auto whitespace-nowrap">
+            <span class="material-symbols-outlined text-[16px]">person_add</span>
+            Add Patient
+        </button>
+    </div>
+
+    @* ── Summary Stat Cards ───────────────────────────────────────────────── *@
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-stack-lg">
+        <div class="bg-surface-card rounded-xl border border-surface-container-high shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-padding-card flex items-center gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-success text-[20px]">verified_user</span>
+            </div>
+            <div>
+                <p class="font-label-bold text-label-bold text-on-surface-variant">Total Active</p>
+                <p class="font-headline-md text-headline-md text-on-surface">@(_activeCount?.ToString() ?? "—")</p>
+            </div>
+        </div>
+        <div class="bg-surface-card rounded-xl border border-surface-container-high shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] p-padding-card flex items-center gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-warning text-[20px]">pending</span>
+            </div>
+            <div>
+                <p class="font-label-bold text-label-bold text-on-surface-variant">Draft Pending</p>
+                <p class="font-headline-md text-headline-md text-on-surface">@(_draftCount?.ToString() ?? "—")</p>
+            </div>
+        </div>
+    </div>
+
+    @* ── Filter Bar ───────────────────────────────────────────────────────── *@
+    <div class="bg-surface-card rounded-xl border border-surface-container-high shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] mb-stack-lg p-padding-card">
+        <div class="flex flex-col lg:flex-row gap-4 items-end">
+            <div class="w-full lg:w-1/3 flex flex-col gap-1">
+                <label class="font-label-bold text-label-bold text-on-surface-variant">Search Patients</label>
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+                    <input @bind="_searchText" @bind:event="oninput" @onkeydown="OnSearchKeyDown"
+                           type="text" placeholder="Search by code, name..."
+                           class="w-full pl-9 pr-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline" />
+                </div>
+            </div>
+            <div class="w-full sm:w-1/2 lg:w-1/4 flex flex-col gap-1">
+                <label class="font-label-bold text-label-bold text-on-surface-variant">Status</label>
+                <select @bind="_filterStatus"
+                        class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none">
+                    <option value="">All Statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Archived">Archived</option>
+                </select>
+            </div>
+            <div class="w-full sm:w-1/2 lg:w-1/4 flex flex-col gap-1">
+                <label class="font-label-bold text-label-bold text-on-surface-variant">Branch</label>
+                <select @bind="_filterBranchId"
+                        class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none">
+                    <option value="">All Branches</option>
+                    @foreach (var (id, name) in _branchOptions)
+                    {
+                        <option value="@id">@name</option>
+                    }
+                </select>
+            </div>
+            <div class="w-full lg:w-auto flex gap-2">
+                <button @onclick="ApplyFilters"
+                        class="h-10 px-4 bg-primary text-on-primary font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors w-full lg:w-auto flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">filter_list</span>
+                    Filter
+                </button>
+                <button @onclick="ClearFilters"
+                        class="h-10 px-4 bg-surface-container-low text-on-surface font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors w-full lg:w-auto flex items-center justify-center gap-2 border border-outline-variant">
+                    Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @* ── Patient Roster Table ─────────────────────────────────────────────── *@
+    <div class="bg-surface-card rounded-xl border border-surface-container-high shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] flex-1 flex flex-col overflow-hidden">
+        <div class="p-padding-card flex items-center justify-between border-b border-surface-container-high">
+            <h2 class="font-title-base text-title-base text-on-surface">Patient Roster</h2>
+            @if (!_loading && _pagedResult is not null)
+            {
+                <span class="font-label-base text-label-base text-on-surface-variant">@_pagedResult.TotalCount patients</span>
+            }
+        </div>
+
+        @if (_loading)
+        {
+            <div class="flex-1 flex items-center justify-center py-20">
+                <span class="material-symbols-outlined animate-spin text-primary text-[36px]">progress_activity</span>
+            </div>
+        }
+        else if (_errorMessage is not null)
+        {
+            <div class="flex-1 flex items-center justify-center py-16 px-8">
+                <div class="text-center">
+                    <span class="material-symbols-outlined text-error text-[48px]">error_outline</span>
+                    <p class="mt-2 font-body-base text-body-base text-error">@_errorMessage</p>
+                    <button @onclick="LoadPatients" class="mt-4 px-4 py-2 bg-primary text-on-primary rounded-lg font-label-bold text-label-bold hover:bg-primary/90">Retry</button>
+                </div>
+            </div>
+        }
+        else if (_pagedResult?.Items.Count == 0)
+        {
+            <div class="flex-1 flex items-center justify-center py-16">
+                <EmptyState Icon="group" Title="No Patients Found" Message="Try adjusting your filters or add a new patient." />
+            </div>
+        }
+        else
+        {
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-surface-container-low border-b border-surface-container-high">
+                        <tr>
+                            <th class="px-4 py-3 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-[11px]">Code</th>
+                            <th class="px-4 py-3 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-[11px]">Name</th>
+                            <th class="px-4 py-3 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-[11px] hidden md:table-cell">Primary Branch</th>
+                            <th class="px-4 py-3 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-[11px]">Status</th>
+                            <th class="px-4 py-3 font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-[11px] text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-surface-container-high">
+                        @foreach (var patient in _pagedResult!.Items)
+                        {
+                            <tr class="hover:bg-surface-container-low/50 transition-colors">
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-surface-container-low border border-outline-variant font-mono font-label-base text-label-base text-on-surface-variant text-xs">@patient.Code</span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="@GetAvatarClass(patient) w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-label-bold text-label-bold text-white">
+                                            @patient.Initials
+                                        </div>
+                                        <div>
+                                            <p class="font-body-base text-body-base text-on-surface font-medium">@patient.FullName</p>
+                                            <p class="font-label-base text-label-base text-on-surface-variant">DOB: @patient.FormattedDob</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 hidden md:table-cell font-body-base text-body-base text-on-surface-variant">
+                                    @GetBranchName(patient.PrimaryBranchId)
+                                </td>
+                                <td class="px-4 py-3">
+                                    <PatientStatusBadge Status="@patient.Status" />
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center justify-end gap-1">
+                                        @if (patient.Status is "Draft" or "Active")
+                                        {
+                                            <button @onclick="() => OpenEditModal(patient)" title="Edit"
+                                                    class="p-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors">
+                                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                                            </button>
+                                        }
+                                        @if (patient.Status == "Draft")
+                                        {
+                                            var capturedForActivate = patient;
+                                            <button @onclick="() => OpenActivateConfirm(capturedForActivate)" title="Activate"
+                                                    class="p-1.5 rounded-md text-on-surface-variant hover:bg-success/10 hover:text-success transition-colors">
+                                                <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                                            </button>
+                                        }
+                                        @if (patient.Status is "Draft" or "Active")
+                                        {
+                                            var capturedForArchive = patient;
+                                            <button @onclick="() => OpenArchiveConfirm(capturedForArchive)" title="Archive"
+                                                    class="p-1.5 rounded-md text-on-surface-variant hover:bg-error/10 hover:text-error transition-colors">
+                                                <span class="material-symbols-outlined text-[18px]">archive</span>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @* Pagination *@
+            @if (_pagedResult is not null && _pagedResult.TotalPages > 1)
+            {
+                <div class="p-padding-card border-t border-surface-container-high flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <p class="font-label-base text-label-base text-on-surface-variant">
+                        Page @_currentPage of @_pagedResult.TotalPages
+                    </p>
+                    <div class="flex items-center gap-1">
+                        <button @onclick="() => GoToPage(_currentPage - 1)" disabled="@(_currentPage <= 1)"
+                                class="h-8 w-8 flex items-center justify-center rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+                        </button>
+                        @for (int p = Math.Max(1, _currentPage - 2); p <= Math.Min(_pagedResult.TotalPages, _currentPage + 2); p++)
+                        {
+                            var pageNum = p;
+                            <button @onclick="() => GoToPage(pageNum)"
+                                    class="@(pageNum == _currentPage ? "bg-primary text-on-primary border-primary" : "border-outline-variant text-on-surface hover:bg-surface-container") h-8 w-8 flex items-center justify-center rounded-md border font-label-bold text-label-bold transition-colors">
+                                @pageNum
+                            </button>
+                        }
+                        <button @onclick="() => GoToPage(_currentPage + 1)" disabled="@(_currentPage >= _pagedResult.TotalPages)"
+                                class="h-8 w-8 flex items-center justify-center rounded-md border border-outline-variant text-on-surface-variant hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@* ════════════════════════════════════════════════════════════════════════════ *@
+@*  ADD PATIENT WIZARD OVERLAY                                                  *@
+@* ════════════════════════════════════════════════════════════════════════════ *@
+@if (_showAddWizard)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm" @onclick="MaybeCloseWizard">
+        <div class="bg-surface-card rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" @onclick:stopPropagation="true">
+            @* Wizard Header *@
+            <div class="flex items-center justify-between p-6 border-b border-surface-container-high">
+                <div>
+                    <h2 class="font-title-lg text-title-lg text-on-surface">Add New Patient</h2>
+                    <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Step @_wizardStep of 3</p>
+                </div>
+                <button @onclick="CloseAddWizard" class="p-2 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            @* Stepper *@
+            <div class="px-6 pt-4 pb-2 flex items-center gap-0">
+                @for (int s = 1; s <= 3; s++)
+                {
+                    var stepNum = s;
+                    string stepLabel = stepNum switch { 1 => "Personal Info", 2 => "Address & Contact", 3 => "Branch & Confirm", _ => "" };
+                    bool done = _wizardStep > stepNum;
+                    bool active = _wizardStep == stepNum;
+                    <div class="flex-1 flex flex-col items-center relative @(stepNum < 3 ? "after:content-[''] after:absolute after:top-4 after:left-[calc(50%+18px)] after:right-0 after:h-0.5 after:bg-surface-container-high" : "")">
+                        <div class="@(done ? "bg-success text-white" : active ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant") w-8 h-8 rounded-full flex items-center justify-center font-label-bold text-label-bold transition-all z-10">
+                            @if (done) { <span class="material-symbols-outlined text-[16px]">check</span> }
+                            else { @stepNum }
+                        </div>
+                        <p class="mt-1 font-label-base text-label-base @(active ? "text-primary" : "text-on-surface-variant") text-center text-xs">@stepLabel</p>
+                    </div>
+                }
+            </div>
+            @* Wizard Body *@
+            <div class="flex-1 overflow-y-auto p-6">
+                @if (_wizardStep == 1)
+                {
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">First Name <span class="text-error">*</span></label>
+                            <input @bind="_wizardForm.FirstName" type="text" placeholder="e.g. Anika"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("FirstName") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                            @if (HasFieldError("FirstName")) { <p class="text-error font-label-base text-label-base">@GetFieldError("FirstName")</p> }
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Last Name <span class="text-error">*</span></label>
+                            <input @bind="_wizardForm.LastName" type="text" placeholder="e.g. Sharma"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("LastName") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                            @if (HasFieldError("LastName")) { <p class="text-error font-label-base text-label-base">@GetFieldError("LastName")</p> }
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Date of Birth <span class="text-error">*</span></label>
+                            <input @bind="_wizardDob" @bind:after="SyncDob" type="date"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("DateOfBirth") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                            @if (HasFieldError("DateOfBirth")) { <p class="text-error font-label-base text-label-base">@GetFieldError("DateOfBirth")</p> }
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Gender <span class="text-error">*</span></label>
+                            <select @bind="_wizardForm.Gender"
+                                    class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("Gender") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none">
+                                <option value="">— Select —</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                                <option value="Unknown">Unknown</option>
+                            </select>
+                            @if (HasFieldError("Gender")) { <p class="text-error font-label-base text-label-base">@GetFieldError("Gender")</p> }
+                        </div>
+                    </div>
+                }
+                @if (_wizardStep == 2)
+                {
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="sm:col-span-2 flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Address Line 1 <span class="text-error">*</span></label>
+                            <input @bind="_wizardForm.AddressLine1" type="text" placeholder="e.g. 12 MG Road"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("AddressLine1") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                            @if (HasFieldError("AddressLine1")) { <p class="text-error font-label-base text-label-base">@GetFieldError("AddressLine1")</p> }
+                        </div>
+                        <div class="sm:col-span-2 flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Address Line 2</label>
+                            <input @bind="_wizardForm.AddressLine2" type="text" placeholder="Apartment, suite, etc."
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">City <span class="text-error">*</span></label>
+                            <input @bind="_wizardForm.City" type="text" placeholder="e.g. Mumbai"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("City") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                            @if (HasFieldError("City")) { <p class="text-error font-label-base text-label-base">@GetFieldError("City")</p> }
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">State / Province <span class="text-error">*</span></label>
+                            <input @bind="_wizardForm.State" type="text" placeholder="e.g. Maharashtra"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("State") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                            @if (HasFieldError("State")) { <p class="text-error font-label-base text-label-base">@GetFieldError("State")</p> }
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Postal Code <span class="text-error">*</span></label>
+                            <input @bind="_wizardForm.PostalCode" type="text" placeholder="e.g. 400001"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("PostalCode") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                            @if (HasFieldError("PostalCode")) { <p class="text-error font-label-base text-label-base">@GetFieldError("PostalCode")</p> }
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Country (ISO 2) <span class="text-error">*</span></label>
+                            <input @bind="_wizardForm.Country" type="text" maxlength="2" placeholder="e.g. IN"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("Country") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary uppercase" />
+                            @if (HasFieldError("Country")) { <p class="text-error font-label-base text-label-base">@GetFieldError("Country")</p> }
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Primary Phone <span class="text-error">*</span></label>
+                            <input @bind="_wizardForm.PrimaryPhone" type="text" placeholder="+91 98765 43210"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("PrimaryPhone") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                            @if (HasFieldError("PrimaryPhone")) { <p class="text-error font-label-base text-label-base">@GetFieldError("PrimaryPhone")</p> }
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Email</label>
+                            <input @bind="_wizardForm.Email" type="email" placeholder="patient@example.com"
+                                   class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("Email") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                            @if (HasFieldError("Email")) { <p class="text-error font-label-base text-label-base">@GetFieldError("Email")</p> }
+                        </div>
+                    </div>
+                }
+                @if (_wizardStep == 3)
+                {
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="font-title-base text-title-base text-on-surface mb-3">Branch Association</h3>
+                            <div class="flex flex-col gap-1">
+                                <label class="font-label-bold text-label-bold text-on-surface-variant">Primary Branch <span class="text-error">*</span></label>
+                                <select @bind="_wizardForm.PrimaryBranchId"
+                                        class="w-full px-3 py-2 bg-surface-bg border @(HasFieldError("PrimaryBranchId") ? "border-error" : "border-outline-variant") rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none">
+                                    <option value="">— Select Branch —</option>
+                                    @foreach (var (id, name) in _branchOptions)
+                                    {
+                                        <option value="@id">@name</option>
+                                    }
+                                </select>
+                                @if (HasFieldError("PrimaryBranchId")) { <p class="text-error font-label-base text-label-base">@GetFieldError("PrimaryBranchId")</p> }
+                            </div>
+                        </div>
+                        <div class="bg-surface-container-low rounded-xl border border-outline-variant p-4">
+                            <h3 class="font-title-base text-title-base text-on-surface mb-3">Registration Summary</h3>
+                            <dl class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <dt class="text-on-surface-variant">Full Name</dt>
+                                    <dd class="font-medium text-on-surface">@string.Join(" ", new[]{ _wizardForm.FirstName, _wizardForm.LastName }.Where(s => !string.IsNullOrWhiteSpace(s)))</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-on-surface-variant">DOB</dt>
+                                    <dd class="font-medium text-on-surface">@_wizardForm.DateOfBirth</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-on-surface-variant">Gender</dt>
+                                    <dd class="font-medium text-on-surface">@_wizardForm.Gender</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-on-surface-variant">Phone</dt>
+                                    <dd class="font-medium text-on-surface">@_wizardForm.PrimaryPhone</dd>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(_wizardForm.Email))
+                                {
+                                    <div class="flex justify-between">
+                                        <dt class="text-on-surface-variant">Email</dt>
+                                        <dd class="font-medium text-on-surface">@_wizardForm.Email</dd>
+                                    </div>
+                                }
+                                <div class="flex justify-between">
+                                    <dt class="text-on-surface-variant">City</dt>
+                                    <dd class="font-medium text-on-surface">@_wizardForm.City</dd>
+                                </div>
+                                <div class="flex justify-between">
+                                    <dt class="text-on-surface-variant">Branch</dt>
+                                    <dd class="font-medium text-on-surface">@GetBranchName(_wizardForm.PrimaryBranchId)</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+                }
+                @if (_wizardError is not null)
+                {
+                    <div class="mt-4 p-3 rounded-lg bg-error-container text-on-error-container font-body-sm text-body-sm flex items-start gap-2">
+                        <span class="material-symbols-outlined text-[18px] flex-shrink-0">error</span>
+                        @_wizardError
+                    </div>
+                }
+            </div>
+            @* Wizard Footer *@
+            <div class="p-6 border-t border-surface-container-high flex items-center justify-between gap-3">
+                @if (_wizardStep > 1)
+                {
+                    <button @onclick="WizardBack" class="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors border border-outline-variant">
+                        <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+                        Back
+                    </button>
+                }
+                else
+                {
+                    <span></span>
+                }
+                <div class="flex items-center gap-2">
+                    @if (_wizardStep < 3)
+                    {
+                        <button @onclick="WizardNext" class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors">
+                            Next Step
+                            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button @onclick="() => WizardSubmitAsync(saveDraft: true)" disabled="@_wizardSaving"
+                                class="px-4 py-2 bg-surface-container-low text-on-surface font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors border border-outline-variant disabled:opacity-50">
+                            Save Draft
+                        </button>
+                        <button @onclick="() => WizardSubmitAsync(saveDraft: false)" disabled="@_wizardSaving"
+                                class="flex items-center gap-2 px-4 py-2 bg-success text-white font-label-bold text-label-bold rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50">
+                            @if (_wizardSaving)
+                            {
+                                <span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                            }
+                            Complete Registration
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ════════════════════════════════════════════════════════════════════════════ *@
+@*  EDIT MODAL                                                                  *@
+@* ════════════════════════════════════════════════════════════════════════════ *@
+@if (_showEditModal && _editTarget is not null)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm" @onclick="CloseEditModal">
+        <div class="bg-surface-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" @onclick:stopPropagation="true">
+            <div class="flex items-center justify-between p-6 border-b border-surface-container-high">
+                <h2 class="font-title-lg text-title-lg text-on-surface">Edit Patient</h2>
+                <button @onclick="CloseEditModal" class="p-2 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <div>
+                    <h3 class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-xs mb-3">Personal Details</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">First Name</label>
+                            <input @bind="_editForm.FirstName" type="text"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Last Name</label>
+                            <input @bind="_editForm.LastName" type="text"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Primary Phone</label>
+                            <input @bind="_editForm.PrimaryPhone" type="text"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Email</label>
+                            <input @bind="_editForm.Email" type="email"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide text-xs mb-3">Address</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="sm:col-span-2 flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Address Line 1</label>
+                            <input @bind="_editForm.AddressLine1" type="text"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                        <div class="sm:col-span-2 flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Address Line 2</label>
+                            <input @bind="_editForm.AddressLine2" type="text"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">City</label>
+                            <input @bind="_editForm.City" type="text"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">State</label>
+                            <input @bind="_editForm.State" type="text"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Postal Code</label>
+                            <input @bind="_editForm.PostalCode" type="text"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Country (ISO 2)</label>
+                            <input @bind="_editForm.Country" type="text" maxlength="2"
+                                   class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary uppercase" />
+                        </div>
+                        <div class="sm:col-span-2 flex flex-col gap-1">
+                            <label class="font-label-bold text-label-bold text-on-surface-variant">Primary Branch</label>
+                            <select @bind="_editForm.PrimaryBranchId"
+                                    class="w-full px-3 py-2 bg-surface-bg border border-outline-variant rounded-lg font-body-base text-body-base text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none">
+                                <option value="">— Unchanged —</option>
+                                @foreach (var (id, name) in _branchOptions)
+                                {
+                                    <option value="@id">@name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                @if (_editError is not null)
+                {
+                    <div class="p-3 rounded-lg bg-error-container text-on-error-container font-body-sm text-body-sm flex items-start gap-2">
+                        <span class="material-symbols-outlined text-[18px] flex-shrink-0">error</span>
+                        @_editError
+                    </div>
+                }
+            </div>
+            <div class="p-6 border-t border-surface-container-high flex items-center justify-end gap-3">
+                <button @onclick="CloseEditModal" class="px-4 py-2 bg-surface-container-low text-on-surface font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors border border-outline-variant">
+                    Cancel
+                </button>
+                <button @onclick="SaveEditAsync" disabled="@_editSaving"
+                        class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary font-label-bold text-label-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
+                    @if (_editSaving)
+                    {
+                        <span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                    }
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ════════════════════════════════════════════════════════════════════════════ *@
+@*  LIFECYCLE CONFIRM DIALOG                                                    *@
+@* ════════════════════════════════════════════════════════════════════════════ *@
+@if (_showLifecycleConfirm && _lifecycleTarget is not null)
+{
+    var isActivate = _lifecycleAction == "activate";
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div class="bg-surface-card rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
+            <div class="flex items-center gap-3">
+                <div class="@(isActivate ? "bg-success/10 text-success" : "bg-error/10 text-error") w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined">@(isActivate ? "check_circle" : "archive")</span>
+                </div>
+                <h3 class="font-title-base text-title-base text-on-surface">@(isActivate ? "Activate Patient" : "Archive Patient")</h3>
+            </div>
+            <p class="font-body-base text-body-base text-on-surface-variant">
+                Are you sure you want to @_lifecycleAction <span class="font-medium text-on-surface">@_lifecycleTarget.FullName</span>?
+                @if (!isActivate) { <text> This will mark the patient as archived.</text> }
+            </p>
+            @if (_lifecycleError is not null)
+            {
+                <div class="p-3 rounded-lg bg-error-container text-on-error-container font-body-sm text-body-sm">@_lifecycleError</div>
+            }
+            <div class="flex items-center justify-end gap-3 mt-2">
+                <button @onclick="CloseLifecycleConfirm" class="px-4 py-2 bg-surface-container-low text-on-surface font-label-bold text-label-bold rounded-lg hover:bg-surface-container transition-colors border border-outline-variant">
+                    Cancel
+                </button>
+                <button @onclick="ConfirmLifecycleAsync" disabled="@_lifecycleSaving"
+                        class="@(isActivate ? "bg-success hover:bg-success/90" : "bg-error hover:bg-error/90") flex items-center gap-2 px-4 py-2 text-white font-label-bold text-label-bold rounded-lg transition-colors disabled:opacity-50">
+                    @if (_lifecycleSaving)
+                    {
+                        <span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                    }
+                    @(isActivate ? "Activate" : "Archive")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Toast ─────────────────────────────────────────────────────────────────── *@
+@if (_toast is not null)
+{
+    <div class="fixed bottom-6 right-6 z-[9999] flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg @(_toast.IsSuccess ? "bg-success text-white" : "bg-error text-white") font-body-base text-body-base transition-all">
+        <span class="material-symbols-outlined text-[20px]">@(_toast.IsSuccess ? "check_circle" : "error")</span>
+        @_toast.Message
+    </div>
+}
+
+@code {
+    // ── state ─────────────────────────────────────────────────────────────────
+    private bool _loading = true;
+    private string? _errorMessage;
+    private PagedResult<PatientModel>? _pagedResult;
+
+    private int? _activeCount;
+    private int? _draftCount;
+
+    private int _currentPage = 1;
+    private const int PageSize = 20;
+
+    private string _searchText = "";
+    private string _filterStatus = "";
+    private string _filterBranchId = "";
+    private string _appliedSearch = "";
+    private string _appliedStatus = "";
+    private string _appliedBranchId = "";
+
+    private List<(string Id, string Name)> _branchOptions = new();
+
+    // ── wizard ────────────────────────────────────────────────────────────────
+    private DateTime? _wizardDob;
+    private void SyncDob() => _wizardForm.DateOfBirth = _wizardDob?.ToString("yyyy-MM-dd") ?? "";
+
+    private bool _showAddWizard = false;
+    private int _wizardStep = 1;
+    private PatientCreateRequest _wizardForm = new();
+    private string? _wizardError;
+    private bool _wizardSaving = false;
+    private Dictionary<string, string> _wizardValidationErrors = new();
+
+    // ── edit modal ────────────────────────────────────────────────────────────
+    private bool _showEditModal = false;
+    private PatientModel? _editTarget;
+    private PatientPatchRequest _editForm = new();
+    private string? _editError;
+    private bool _editSaving = false;
+
+    // ── lifecycle confirm ─────────────────────────────────────────────────────
+    private bool _showLifecycleConfirm = false;
+    private PatientModel? _lifecycleTarget;
+    private string _lifecycleAction = "";
+    private string? _lifecycleError;
+    private bool _lifecycleSaving = false;
+
+    // ── toast ─────────────────────────────────────────────────────────────────
+    private ToastMessage? _toast;
+    private System.Threading.Timer? _toastTimer;
+
+    private sealed record ToastMessage(string Message, bool IsSuccess);
+
+    // ── lifecycle ──────────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(LoadBranchOptions(), LoadStatCounts());
+        await LoadPatients();
+    }
+
+    private async Task LoadBranchOptions()
+    {
+        try
+        {
+            var result = await BranchService.ListAsync(page: 1, size: 200);
+            if (result.IsSuccess && result.Data is not null)
+                _branchOptions = result.Data.Items.Select(b => (b.Id, b.Name)).ToList();
+        }
+        catch { /* non-critical */ }
+    }
+
+    private async Task LoadStatCounts()
+    {
+        try
+        {
+            var activeTask = PatientService.ListAsync(page: 1, size: 1, status: "Active");
+            var draftTask  = PatientService.ListAsync(page: 1, size: 1, status: "Draft");
+            await Task.WhenAll(activeTask, draftTask);
+            var activeResult = await activeTask;
+            var draftResult  = await draftTask;
+            if (activeResult.IsSuccess) _activeCount = activeResult.Data?.TotalCount;
+            if (draftResult.IsSuccess)  _draftCount  = draftResult.Data?.TotalCount;
+        }
+        catch { /* non-critical */ }
+    }
+
+    private async Task LoadPatients()
+    {
+        _loading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        var result = await PatientService.ListAsync(
+            page: _currentPage,
+            size: PageSize,
+            status: string.IsNullOrWhiteSpace(_appliedStatus) ? null : _appliedStatus,
+            branchId: string.IsNullOrWhiteSpace(_appliedBranchId) ? null : _appliedBranchId,
+            q: string.IsNullOrWhiteSpace(_appliedSearch) ? null : _appliedSearch);
+
+        if (result.IsSuccess)
+            _pagedResult = result.Data;
+        else
+            _errorMessage = result.Error?.Detail ?? "Failed to load patients.";
+
+        _loading = false;
+    }
+
+    private async Task GoToPage(int page)
+    {
+        _currentPage = page;
+        await LoadPatients();
+    }
+
+    private async Task ApplyFilters()
+    {
+        _currentPage = 1;
+        _appliedSearch = _searchText;
+        _appliedStatus = _filterStatus;
+        _appliedBranchId = _filterBranchId;
+        await LoadPatients();
+    }
+
+    private async Task ClearFilters()
+    {
+        _searchText = _filterStatus = _filterBranchId = "";
+        _appliedSearch = _appliedStatus = _appliedBranchId = "";
+        _currentPage = 1;
+        await LoadPatients();
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ApplyFilters();
+    }
+
+    // ── wizard ────────────────────────────────────────────────────────────────
+    private void OpenAddWizard()
+    {
+        _wizardForm = new();
+        _wizardDob = null;
+        _wizardStep = 1;
+        _wizardError = null;
+        _wizardValidationErrors = new();
+        _wizardSaving = false;
+        _showAddWizard = true;
+    }
+
+    private void CloseAddWizard() => _showAddWizard = false;
+
+    private void MaybeCloseWizard() => CloseAddWizard();
+
+    private void WizardNext()
+    {
+        _wizardValidationErrors = ValidateStep(_wizardStep);
+        if (_wizardValidationErrors.Count > 0) return;
+        if (_wizardStep < 3) _wizardStep++;
+    }
+
+    private void WizardBack()
+    {
+        if (_wizardStep > 1) _wizardStep--;
+        _wizardError = null;
+    }
+
+    private async Task WizardSubmitAsync(bool saveDraft)
+    {
+        _wizardValidationErrors = ValidateStep(3);
+        if (_wizardValidationErrors.Count > 0) return;
+
+        _wizardSaving = true;
+        _wizardError = null;
+
+        var result = await PatientService.CreateAsync(_wizardForm);
+        if (result.IsSuccess)
+        {
+            var patient = result.Data!;
+            if (!saveDraft && patient.Status == "Draft")
+            {
+                // auto-activate
+                var activateResult = await PatientService.ActivateAsync(patient.Id);
+                if (!activateResult.IsSuccess)
+                    _wizardError = activateResult.Error?.Detail ?? "Registration saved as Draft — activation failed.";
+            }
+            _showAddWizard = false;
+            await LoadStatCounts();
+            await LoadPatients();
+            ShowToast(saveDraft ? "Patient saved as Draft." : "Patient registered successfully.", true);
+        }
+        else
+        {
+            _wizardError = result.Error?.Detail ?? "Failed to register patient.";
+        }
+
+        _wizardSaving = false;
+    }
+
+    private Dictionary<string, string> ValidateStep(int step)
+    {
+        var errors = new Dictionary<string, string>();
+        if (step == 1)
+        {
+            if (string.IsNullOrWhiteSpace(_wizardForm.FirstName))  errors["FirstName"]  = "First name is required.";
+            if (string.IsNullOrWhiteSpace(_wizardForm.LastName))   errors["LastName"]   = "Last name is required.";
+            if (string.IsNullOrWhiteSpace(_wizardForm.DateOfBirth)) errors["DateOfBirth"] = "Date of birth is required.";
+            if (string.IsNullOrWhiteSpace(_wizardForm.Gender))     errors["Gender"]     = "Gender is required.";
+        }
+        else if (step == 2)
+        {
+            if (string.IsNullOrWhiteSpace(_wizardForm.AddressLine1)) errors["AddressLine1"] = "Address is required.";
+            if (string.IsNullOrWhiteSpace(_wizardForm.City))         errors["City"]         = "City is required.";
+            if (string.IsNullOrWhiteSpace(_wizardForm.State))        errors["State"]        = "State is required.";
+            if (string.IsNullOrWhiteSpace(_wizardForm.PostalCode))   errors["PostalCode"]   = "Postal code is required.";
+            if (string.IsNullOrWhiteSpace(_wizardForm.Country) || _wizardForm.Country.Length != 2)
+                errors["Country"] = "Country must be a 2-letter ISO code.";
+            if (string.IsNullOrWhiteSpace(_wizardForm.PrimaryPhone)) errors["PrimaryPhone"] = "Primary phone is required.";
+        }
+        else if (step == 3)
+        {
+            if (string.IsNullOrWhiteSpace(_wizardForm.PrimaryBranchId)) errors["PrimaryBranchId"] = "Primary branch is required.";
+        }
+        return errors;
+    }
+
+    private bool HasFieldError(string field) => _wizardValidationErrors.ContainsKey(field);
+    private string GetFieldError(string field) => _wizardValidationErrors.TryGetValue(field, out var e) ? e : "";
+
+    // ── edit modal ────────────────────────────────────────────────────────────
+    private void OpenEditModal(PatientModel patient)
+    {
+        _editTarget = patient;
+        _editForm = new()
+        {
+            FirstName     = patient.FirstName,
+            LastName      = patient.LastName,
+            PrimaryPhone  = patient.PrimaryPhone,
+            Email         = patient.Email,
+            AddressLine1  = patient.AddressLine1,
+            AddressLine2  = patient.AddressLine2,
+            City          = patient.City,
+            State         = patient.State,
+            PostalCode    = patient.PostalCode,
+            Country       = patient.Country,
+            PrimaryBranchId = patient.PrimaryBranchId
+        };
+        _editError = null;
+        _editSaving = false;
+        _showEditModal = true;
+    }
+
+    private void CloseEditModal() => _showEditModal = false;
+
+    private async Task SaveEditAsync()
+    {
+        if (_editTarget is null) return;
+        _editSaving = true;
+        _editError = null;
+
+        var result = await PatientService.PatchAsync(_editTarget.Id, _editForm);
+        if (result.IsSuccess)
+        {
+            _showEditModal = false;
+            await LoadPatients();
+            ShowToast("Patient updated successfully.", true);
+        }
+        else
+        {
+            _editError = result.Error?.Detail ?? "Failed to update patient.";
+        }
+
+        _editSaving = false;
+    }
+
+    // ── lifecycle ─────────────────────────────────────────────────────────────
+    private void OpenActivateConfirm(PatientModel patient) => OpenLifecycleConfirm(patient, "activate");
+    private void OpenArchiveConfirm(PatientModel patient)  => OpenLifecycleConfirm(patient, "archive");
+
+    private void OpenLifecycleConfirm(PatientModel patient, string action)
+    {
+        _lifecycleTarget = patient;
+        _lifecycleAction = action;
+        _lifecycleError = null;
+        _lifecycleSaving = false;
+        _showLifecycleConfirm = true;
+    }
+
+    private void CloseLifecycleConfirm() => _showLifecycleConfirm = false;
+
+    private async Task ConfirmLifecycleAsync()
+    {
+        if (_lifecycleTarget is null) return;
+        _lifecycleSaving = true;
+        _lifecycleError = null;
+
+        ApiResponse<PatientModel> result = _lifecycleAction == "activate"
+            ? await PatientService.ActivateAsync(_lifecycleTarget.Id)
+            : await PatientService.ArchiveAsync(_lifecycleTarget.Id);
+
+        if (result.IsSuccess)
+        {
+            _showLifecycleConfirm = false;
+            await LoadStatCounts();
+            await LoadPatients();
+            ShowToast($"Patient {_lifecycleAction}d successfully.", true);
+        }
+        else
+        {
+            _lifecycleError = result.Error?.Detail ?? $"Failed to {_lifecycleAction} patient.";
+        }
+
+        _lifecycleSaving = false;
+    }
+
+    // ── helpers ───────────────────────────────────────────────────────────────
+    private string GetBranchName(string branchId)
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return "—";
+        var branch = _branchOptions.FirstOrDefault(b => b.Id == branchId);
+        return string.IsNullOrEmpty(branch.Name) ? branchId : branch.Name;
+    }
+
+    private static readonly string[] AvatarColors =
+    [
+        "bg-primary", "bg-secondary", "bg-tertiary",
+        "bg-[#7B5EA7]", "bg-[#2E7D8B]", "bg-[#A0522D]"
+    ];
+
+    private static string GetAvatarClass(PatientModel patient)
+    {
+        int hash = Math.Abs((patient.FirstName + patient.LastName).GetHashCode());
+        return AvatarColors[hash % AvatarColors.Length];
+    }
+
+    private void ShowToast(string message, bool success)
+    {
+        _toastTimer?.Dispose();
+        _toast = new ToastMessage(message, success);
+        StateHasChanged();
+        _toastTimer = new System.Threading.Timer(_ =>
+        {
+            _toast = null;
+            InvokeAsync(StateHasChanged);
+        }, null, 3500, System.Threading.Timeout.Infinite);
+    }
+
+    public void Dispose() => _toastTimer?.Dispose();
+}

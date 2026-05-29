@@ -1,0 +1,130 @@
+is_global = true
+build_property.EnableAotAnalyzer = 
+build_property.EnableSingleFileAnalyzer = 
+build_property.EnableTrimAnalyzer = false
+build_property.IncludeAllContentForSelfExtract = 
+build_property.VerifyReferenceTrimCompatibility = 
+build_property.VerifyReferenceAotCompatibility = 
+build_property.TargetFramework = net10.0
+build_property.TargetFrameworkIdentifier = .NETCoreApp
+build_property.TargetFrameworkVersion = v10.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = false
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property.EntryPointFilePath = 
+build_property._SupportedPlatformList = browser
+build_property.RootNamespace = Nexus.Web.Client
+build_property.RootNamespace = Nexus.Web.Client
+build_property.ProjectDir = C:\000 - HA - S02\e2e\front-end\Nexus.Web.Client\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = false
+build_property.RazorLangVersion = 10.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\000 - HA - S02\e2e\front-end\Nexus.Web.Client
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 10.0
+build_property.EnableCodeStyleSeverity = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/App.razor]
+build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Components/Shared/EmptyState.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcRW1wdHlTdGF0ZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Components/Shared/LoadingSpinner.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcTG9hZGluZ1NwaW5uZXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Components/Shared/PatientStatusBadge.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcUGF0aWVudFN0YXR1c0JhZGdlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Components/Shared/ServiceHealthPanel.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcU2VydmljZUhlYWx0aFBhbmVsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Components/Shared/Toast.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xTaGFyZWRcVG9hc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Layout/EmptyLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XEVtcHR5TGF5b3V0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Layout/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE1haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Layout/NavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE5hdk1lbnUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Layout/TopBar.razor]
+build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XFRvcEJhci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Analytics.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQW5hbHl0aWNzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Audit/AuditLog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXVkaXRcQXVkaXRMb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Auth/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXV0aFxMb2dpbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Branches/BranchList.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQnJhbmNoZXNcQnJhbmNoTGlzdC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRGFzaGJvYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Doctors/DoctorList.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRG9jdG9yc1xEb2N0b3JMaXN0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/News.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTmV3cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Patients/PatientList.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUGF0aWVudHNcUGF0aWVudExpc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Preferences.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcUHJlZmVyZW5jZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Settings.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2V0dGluZ3MucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/Support.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU3VwcG9ydC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/TermsOfService.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGVybXNPZlNlcnZpY2UucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/Pages/UserProfile.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXNlclByb2ZpbGUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/RedirectToLogin.razor]
+build_metadata.AdditionalFiles.TargetPath = UmVkaXJlY3RUb0xvZ2luLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/000 - HA - S02/e2e/front-end/Nexus.Web.Client/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 

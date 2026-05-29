@@ -1,0 +1,14 @@
+@* Renders a colored status pill for a Patient status string. *@
+<span class="inline-flex items-center px-2 py-0.5 rounded-full font-label-bold text-label-bold text-xs @GetClasses()">@Status</span>
+
+@code {
+    [Parameter, EditorRequired] public string Status { get; set; } = "";
+
+    private string GetClasses() => Status switch
+    {
+        "Active"   => "bg-status-active/[0.15] text-status-active",
+        "Draft"    => "bg-warning/[0.15] text-warning",
+        "Archived" => "bg-surface-container-high text-on-surface-variant",
+        _          => "bg-surface-container text-on-surface-variant"
+    };
+}

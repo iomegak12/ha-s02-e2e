@@ -1,0 +1,304 @@
+# Nexus HA — production stack (pre-built images, no build)
+#
+# Pulls all service images from the registry as iomega/*:latest.
+# Use this file for production / staging releases.
+# Images must be pushed to the registry before running this compose.
+#
+# Prerequisites:
+#   cp .env.example .env   # then fill in production secrets
+#
+# Quick start:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Useful URLs (once running):
+#   http://localhost:3000          Grafana        (admin / see .env)
+#   http://localhost:8000/swagger  Identity API
+#   http://localhost:9000/swagger  Patient API
+#   http://localhost:10000/swagger Doctor API
+#   http://localhost:11000/swagger Branch API
+#   http://localhost:12000/swagger Audit API
+#
+# Tear down (preserve volumes):  docker compose -f docker-compose.prod.yml down
+# Tear down + wipe volumes:      docker compose -f docker-compose.prod.yml down -v
+
+name: nexus-ha
+
+networks:
+  nexus-ha-network:
+    driver: bridge
+
+volumes:
+  sqlserver_data:
+  prometheus_data:
+  loki_data:
+  tempo_data:
+  grafana_data:
+  doctor_docs:
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Data tier
+  # ---------------------------------------------------------------------------
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: nexus-sqlserver
+    networks: [nexus-ha-network]
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${SQL_SA_PASSWORD:?SQL_SA_PASSWORD must be set in .env}"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -No -Q "SELECT 1" || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Observability tier
+  # ---------------------------------------------------------------------------
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    container_name: nexus-otel-collector
+    networks: [nexus-ha-network]
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./observability/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus exposition for OTLP-received metrics
+    depends_on:
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: nexus-prometheus
+    networks: [nexus-ha-network]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=72h"
+      - "--web.enable-lifecycle"
+      - "--web.enable-remote-write-receiver"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: nexus-loki
+    networks: [nexus-ha-network]
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./observability/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: nexus-tempo
+    networks: [nexus-ha-network]
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP query API
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: nexus-grafana
+    networks: [nexus-ha-network]
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in .env}"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_DEFAULT_THEME: "dark"
+      GF_FEATURE_TOGGLES_ENABLE: "traceqlEditor traceToProfiles"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
+
+  # ---------------------------------------------------------------------------
+  # Application tier
+  # ---------------------------------------------------------------------------
+
+  nexus-identity-service:
+    image: iomega/nexus-identity-service:latest
+    container_name: nexus-identity-service
+    networks: [nexus-ha-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:8000"
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusIdentity;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-false}"
+      Persistence__FailFast: "false"
+      Observability__Otlp__Endpoint: "http://otel-collector:4317"
+      Observability__Otlp__Protocol: "Grpc"
+      Observability__Prometheus__Enabled: "true"
+      Seeder__DevSeedAdminEnabled: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+
+  nexus-audit-service:
+    image: iomega/nexus-audit-service:latest
+    container_name: nexus-audit-service
+    networks: [nexus-ha-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:12000"
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusAudit;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-false}"
+      Persistence__FailFast: "false"
+      Auth__Authority: "http://nexus-identity-service:8000"
+      Auth__Audience: "nexus-ha"
+      Auth__Issuer: "https://api.nexusha.local/identity"
+      Observability__Otlp__Endpoint: "http://otel-collector:4317"
+      Observability__Otlp__Protocol: "Grpc"
+      Observability__Prometheus__Enabled: "true"
+    ports:
+      - "12000:12000"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      nexus-identity-service:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+
+  nexus-branch-service:
+    image: iomega/nexus-branch-service:latest
+    container_name: nexus-branch-service
+    networks: [nexus-ha-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:11000"
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusBranches;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-false}"
+      Persistence__FailFast: "false"
+      Auth__Authority: "http://nexus-identity-service:8000"
+      Auth__Audience: "nexus-ha"
+      Auth__Issuer: "https://api.nexusha.local/identity"
+      AuditClient__BaseUrl: "http://nexus-audit-service:12000"
+      AuditClient__Enabled: "true"
+      AuditClient__SourceService: "nexus-branch"
+      Observability__Otlp__Endpoint: "http://otel-collector:4317"
+      Observability__Otlp__Protocol: "Grpc"
+      Observability__Prometheus__Enabled: "true"
+    ports:
+      - "11000:11000"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      nexus-identity-service:
+        condition: service_started
+      nexus-audit-service:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+
+  nexus-patient-service:
+    image: iomega/nexus-patient-service:latest
+    container_name: nexus-patient-service
+    networks: [nexus-ha-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:9000"
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusPatients;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-false}"
+      Persistence__FailFast: "false"
+      Auth__Authority: "http://nexus-identity-service:8000"
+      Auth__Audience: "nexus-ha"
+      Auth__Issuer: "https://api.nexusha.local/identity"
+      AuditClient__BaseUrl: "http://nexus-audit-service:12000"
+      AuditClient__Enabled: "true"
+      AuditClient__SourceService: "nexus-patient"
+      Branches__BaseUrl: "http://nexus-branch-service:11000"
+      Purge__Enabled: "false"
+      Purge__RetentionDays: "30"
+      Purge__IntervalMinutes: "60"
+      Observability__Otlp__Endpoint: "http://otel-collector:4317"
+      Observability__Otlp__Protocol: "Grpc"
+      Observability__Prometheus__Enabled: "true"
+    ports:
+      - "9000:9000"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      nexus-identity-service:
+        condition: service_started
+      nexus-audit-service:
+        condition: service_started
+      nexus-branch-service:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+
+  nexus-doctor-service:
+    image: iomega/nexus-doctor-service:latest
+    container_name: nexus-doctor-service
+    networks: [nexus-ha-network]
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:10000"
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusDoctors;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-false}"
+      Persistence__FailFast: "false"
+      Auth__Authority: "http://nexus-identity-service:8000"
+      Auth__Audience: "nexus-ha"
+      Auth__Issuer: "https://api.nexusha.local/identity"
+      AuditClient__BaseUrl: "http://nexus-audit-service:12000"
+      AuditClient__Enabled: "true"
+      AuditClient__SourceService: "nexus-doctor"
+      Branches__BaseUrl: "http://nexus-branch-service:11000"
+      Documents__RootPath: "/var/data/nexus/doctor-docs"
+      Documents__MaxFileBytes: "10485760"
+      Observability__Otlp__Endpoint: "http://otel-collector:4317"
+      Observability__Otlp__Protocol: "Grpc"
+      Observability__Prometheus__Enabled: "true"
+    ports:
+      - "10000:10000"
+    volumes:
+      - doctor_docs:/var/data/nexus/doctor-docs
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      nexus-identity-service:
+        condition: service_started
+      nexus-audit-service:
+        condition: service_started
+      nexus-branch-service:
+        condition: service_started
+      otel-collector:
+        condition: service_started

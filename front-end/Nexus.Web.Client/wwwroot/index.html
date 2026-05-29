@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexus HA — Clinical Admin</title>
+    <base href="/" />
+
+    <!-- Google Fonts: Roboto + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+
+    <!-- Material Symbols Outlined -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS (CDN with full config — swap for built CSS in production) -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        // ── Surface ─────────────────────────────────────────
+                        "surface":                   "#f9f9ff",
+                        "surface-dim":               "#d3daea",
+                        "surface-bright":            "#f9f9ff",
+                        "surface-container-lowest":  "#ffffff",
+                        "surface-container-low":     "#f0f3ff",
+                        "surface-container":         "#e7eefe",
+                        "surface-container-high":    "#e2e8f8",
+                        "surface-container-highest": "#dce2f3",
+                        "surface-variant":           "#dce2f3",
+                        "surface-tint":              "#4d44e3",
+                        "surface-card":              "#FFFFFF",
+                        "surface-bg":                "#F3F4F6",
+                        // ── On-Surface ──────────────────────────────────────
+                        "on-surface":                "#151c27",
+                        "on-surface-variant":        "#464555",
+                        "inverse-surface":           "#2a313d",
+                        "inverse-on-surface":        "#ebf1ff",
+                        // ── Outline ─────────────────────────────────────────
+                        "outline":                   "#777587",
+                        "outline-variant":           "#c7c4d8",
+                        // ── Primary ─────────────────────────────────────────
+                        "primary":                   "#3525cd",
+                        "on-primary":                "#ffffff",
+                        "primary-container":         "#4f46e5",
+                        "on-primary-container":      "#dad7ff",
+                        "inverse-primary":           "#c3c0ff",
+                        "primary-fixed":             "#e2dfff",
+                        "primary-fixed-dim":         "#c3c0ff",
+                        "on-primary-fixed":          "#0f0069",
+                        "on-primary-fixed-variant":  "#3323cc",
+                        // ── Secondary ───────────────────────────────────────
+                        "secondary":                 "#006591",
+                        "on-secondary":              "#ffffff",
+                        "secondary-container":       "#39b8fd",
+                        "on-secondary-container":    "#004666",
+                        "secondary-fixed":           "#c9e6ff",
+                        "secondary-fixed-dim":       "#89ceff",
+                        "on-secondary-fixed":        "#001e2f",
+                        "on-secondary-fixed-variant":"#004c6e",
+                        // ── Tertiary ────────────────────────────────────────
+                        "tertiary":                  "#46494a",
+                        "on-tertiary":               "#ffffff",
+                        "tertiary-container":        "#5e6061",
+                        "on-tertiary-container":     "#dadbdc",
+                        "tertiary-fixed":            "#e1e3e4",
+                        "tertiary-fixed-dim":        "#c5c7c8",
+                        "on-tertiary-fixed":         "#191c1d",
+                        "on-tertiary-fixed-variant": "#454748",
+                        // ── Error ───────────────────────────────────────────
+                        "error":                     "#ba1a1a",
+                        "on-error":                  "#ffffff",
+                        "error-container":           "#ffdad6",
+                        "on-error-container":        "#93000a",
+                        // ── Background ──────────────────────────────────────
+                        "background":                "#f9f9ff",
+                        "on-background":             "#151c27",
+                        // ── Status semantics ────────────────────────────────
+                        "status-active":             "#10B981",
+                        "status-pending":            "#F59E0B",
+                        "status-error":              "#EF4444",
+                        "status-verified":           "#6366F1",
+                        "status-archived":           "#374151",
+                        "warning":                   "#F59E0B",
+                    },
+                    borderRadius: {
+                        "sm":      "0.25rem",
+                        "DEFAULT": "0.5rem",
+                        "md":      "0.75rem",
+                        "lg":      "1rem",
+                        "xl":      "1.5rem",
+                        "full":    "9999px",
+                    },
+                    spacing: {
+                        "margin-page":            "24px",
+                        "gutter-grid":            "16px",
+                        "padding-card":           "20px",
+                        "sidebar-width":          "240px",
+                        "sidebar-width-collapsed":"64px",
+                        "topbar-height":          "56px",
+                        "stack-sm":               "4px",
+                        "stack-md":               "12px",
+                        "stack-lg":               "24px",
+                    },
+                    fontFamily: {
+                        "sans":       ["Roboto", "sans-serif"],
+                        "mono":       ["JetBrains Mono", "monospace"],
+                        "display-lg": ["Roboto"],
+                        "headline-md":["Roboto"],
+                        "body-base":  ["Roboto"],
+                        "body-sm":    ["Roboto"],
+                        "label-bold": ["Roboto"],
+                        "code-mono":  ["JetBrains Mono"],
+                    },
+                    fontSize: {
+                        "display-lg":  ["30px", { lineHeight: "38px",  letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "headline-md": ["20px", { lineHeight: "28px",  fontWeight: "500" }],
+                        "body-base":   ["12px", { lineHeight: "18px",  fontWeight: "400" }],
+                        "body-sm":     ["11px", { lineHeight: "16px",  fontWeight: "400" }],
+                        "label-bold":  ["12px", { lineHeight: "16px",  fontWeight: "700" }],
+                        "code-mono":   ["11px", { lineHeight: "16px",  fontWeight: "400" }],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Material Symbols base */
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-smoothing: antialiased;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Blazor loading UI */
+        #blazor-error-ui {
+            background: #ffdad6;
+            bottom: 0;
+            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+            display: none;
+            left: 0;
+            padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+            position: fixed;
+            width: 100%;
+            z-index: 1000;
+        }
+        #blazor-error-ui .dismiss {
+            cursor: pointer;
+            position: absolute;
+            right: 0.75rem;
+            top: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-surface-bg text-on-surface font-sans text-body-base antialiased">
+
+    <div id="app">
+        <!-- Blazor loading indicator -->
+        <div class="flex items-center justify-center h-screen bg-surface-bg">
+            <div class="flex flex-col items-center gap-4">
+                <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                    <span class="material-symbols-outlined text-on-primary text-2xl"
+                          style="font-variation-settings: 'FILL' 1;">medical_services</span>
+                </div>
+                <div class="w-8 h-8 border-4 border-primary-fixed border-t-primary rounded-full animate-spin"></div>
+                <p class="text-on-surface-variant text-body-sm">Loading Nexus HA...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script>
+        // Theme helpers — called via Blazor JS interop
+        window.nexus = {
+            toggleTheme: function () {
+                var html = document.documentElement;
+                html.classList.toggle('dark');
+                localStorage.setItem('nexus-theme', html.classList.contains('dark') ? 'dark' : 'light');
+            },
+            getTheme: function () {
+                return localStorage.getItem('nexus-theme') || 'light';
+            },
+            applyTheme: function (theme) {
+                if (theme === 'dark') document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+            }
+        };
+        // Apply saved theme immediately before Blazor boots
+        (function () {
+            var t = localStorage.getItem('nexus-theme') || 'light';
+            if (t === 'dark') document.documentElement.classList.add('dark');
+        })();
+    </script>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+@inject NavigationManager Nav
+@inject IAuthService AuthService
+@inject SessionState Session
+@inject IJSRuntime JS
+
+<header class="h-topbar-height min-h-topbar-height bg-surface border-b border-outline-variant flex items-center px-4 gap-4 flex-shrink-0 z-30">
+
+    <!-- Left: hamburger toggle + brand logo -->
+    <div class="flex items-center gap-3 flex-shrink-0">
+        <button @onclick="OnToggle"
+                class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                title="Toggle sidebar">
+            <span class="material-symbols-outlined text-[22px]">menu</span>
+        </button>
+        <div class="flex items-center gap-2 text-primary">
+            <span class="material-symbols-outlined font-black"
+                  style="font-variation-settings: 'FILL' 1; font-size: 22px;">medical_services</span>
+            @if (!IsCollapsed)
+            {
+                <span class="font-headline-md text-headline-md font-black whitespace-nowrap select-none">Nexus HA</span>
+            }
+        </div>
+    </div>
+
+    <!-- Center: primary navigation links -->
+    <nav class="hidden md:flex items-center gap-1 flex-1 justify-center">
+        <NavLink href="/"
+                 Match="NavLinkMatch.All"
+                 class="px-3 py-2 rounded-lg text-on-surface-variant text-body-base hover:bg-surface-container-high transition-colors whitespace-nowrap"
+                 ActiveClass="bg-primary-container/70 text-on-primary-container font-bold">
+            Home
+        </NavLink>
+        <NavLink href="/dashboard"
+                 class="px-3 py-2 rounded-lg text-on-surface-variant text-body-base hover:bg-surface-container-high transition-colors whitespace-nowrap"
+                 ActiveClass="bg-primary-container/70 text-on-primary-container font-bold">
+            Dashboard
+        </NavLink>
+        <NavLink href="/news"
+                 class="px-3 py-2 rounded-lg text-on-surface-variant text-body-base hover:bg-surface-container-high transition-colors whitespace-nowrap"
+                 ActiveClass="bg-primary-container/70 text-on-primary-container font-bold">
+            News
+        </NavLink>
+        <NavLink href="/analytics"
+                 class="px-3 py-2 rounded-lg text-on-surface-variant text-body-base hover:bg-surface-container-high transition-colors whitespace-nowrap"
+                 ActiveClass="bg-primary-container/70 text-on-primary-container font-bold">
+            Analytics
+        </NavLink>
+        <NavLink href="/support"
+                 class="px-3 py-2 rounded-lg text-on-surface-variant text-body-base hover:bg-surface-container-high transition-colors whitespace-nowrap"
+                 ActiveClass="bg-primary-container/70 text-on-primary-container font-bold">
+            Support
+        </NavLink>
+    </nav>
+
+    <!-- Right: service health + theme toggle + user profile -->
+    <div class="flex items-center gap-1 ml-auto flex-shrink-0">
+
+        <!-- Service health panel -->
+        <ServiceHealthPanel />
+
+        <!-- Dark / Light theme toggle -->
+        <button @onclick="ToggleTheme"
+                class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                title="@(_isDark ? "Switch to light mode" : "Switch to dark mode")">
+            @if (_isDark)
+            {
+                <span class="material-symbols-outlined text-[20px]">light_mode</span>
+            }
+            else
+            {
+                <span class="material-symbols-outlined text-[20px]">dark_mode</span>
+            }
+        </button>
+
+        <!-- User profile dropdown -->
+        <div class="relative">
+            <button @onclick="ToggleProfileMenu"
+                    class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-surface-container-high transition-colors"
+                    title="Account">
+                <div class="w-7 h-7 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs select-none">
+                    @Initials
+                </div>
+                <span class="material-symbols-outlined text-[16px] text-on-surface-variant">expand_more</span>
+            </button>
+
+            @if (_showProfileMenu)
+            {
+                <!-- Click-outside backdrop -->
+                <div class="fixed inset-0 z-40" @onclick="CloseProfileMenu"></div>
+
+                <!-- Dropdown card -->
+                <div class="absolute right-0 top-full mt-1 w-52 bg-surface-card border border-outline-variant rounded-lg shadow-lg z-50 overflow-hidden">
+
+                    <!-- User info header -->
+                    <div class="px-4 py-3 bg-surface-container-low border-b border-outline-variant/30">
+                        <div class="font-label-bold text-label-bold text-on-surface truncate">@(Session.Current?.Username ?? "")</div>
+                        <div class="font-body-sm text-body-sm text-on-surface-variant">@(Session.Current?.Role ?? "Admin")</div>
+                    </div>
+
+                    <!-- Menu items -->
+                    <div class="py-1">
+                        <a href="/profile" class="flex items-center gap-3 px-4 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-colors text-body-base cursor-pointer" @onclick="CloseProfileMenu">
+                            <span class="material-symbols-outlined text-[18px]">person</span>
+                            <span>Profile</span>
+                        </a>
+                        <a href="/settings" class="flex items-center gap-3 px-4 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-colors text-body-base cursor-pointer" @onclick="CloseProfileMenu">
+                            <span class="material-symbols-outlined text-[18px]">settings</span>
+                            <span>Settings</span>
+                        </a>
+                    </div>
+
+                    <!-- Logout -->
+                    <div class="border-t border-outline-variant/30 py-1">
+                        <button @onclick="HandleLogout"
+                                disabled="@_isLoggingOut"
+                                class="w-full flex items-center gap-3 px-4 py-2.5 text-error hover:bg-error-container transition-colors text-body-base disabled:opacity-50">
+                            @if (_isLoggingOut)
+                            {
+                                <div class="w-4 h-4 border-2 border-error border-t-transparent rounded-full animate-spin"></div>
+                            }
+                            else
+                            {
+                                <span class="material-symbols-outlined text-[18px]">logout</span>
+                            }
+                            <span>Sign Out</span>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+
+    </div>
+</header>
+
+@code {
+    [Parameter, EditorRequired] public bool IsCollapsed { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnToggle { get; set; }
+
+    private bool _isDark;
+    private bool _showProfileMenu;
+    private bool _isLoggingOut;
+
+    private string Initials => Session.Current?.Username is { Length: > 0 } u
+        ? u[..1].ToUpperInvariant()
+        : "A";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var theme = await JS.InvokeAsync<string>("nexus.getTheme");
+            _isDark = theme == "dark";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        _isDark = !_isDark;
+        await JS.InvokeVoidAsync("nexus.toggleTheme");
+    }
+
+    private void ToggleProfileMenu() => _showProfileMenu = !_showProfileMenu;
+    private void CloseProfileMenu() => _showProfileMenu = false;
+
+    private async Task HandleLogout()
+    {
+        _isLoggingOut = true;
+        _showProfileMenu = false;
+        await AuthService.LogoutAsync();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+}

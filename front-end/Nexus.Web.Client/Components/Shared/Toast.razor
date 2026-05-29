@@ -1,0 +1,78 @@
+@* RFC 9457 ProblemDetails-aware toast. Call Show(problem) or ShowSuccess(message). *@
+@implements IDisposable
+
+@if (_visible)
+{
+    <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+        <div class="@ToastClasses pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg border max-w-sm w-full transition-all">
+            <span class="material-symbols-outlined text-[20px] mt-0.5 flex-shrink-0">@_icon</span>
+            <div class="flex-1 min-w-0">
+                <p class="font-label-bold text-label-bold">@_title</p>
+                @if (_detail is not null)
+                {
+                    <p class="font-body-sm text-body-sm mt-0.5 opacity-80">@_detail</p>
+                }
+                @if (_code is not null)
+                {
+                    <p class="font-code-mono text-code-mono mt-1 opacity-60">@_code</p>
+                }
+            </div>
+            <button @onclick="Dismiss" class="text-current opacity-50 hover:opacity-100 transition-opacity flex-shrink-0">
+                <span class="material-symbols-outlined text-[16px]">close</span>
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private bool    _visible;
+    private string  _title  = "";
+    private string? _detail;
+    private string? _code;
+    private bool    _isError = true;
+    private string  _icon => _isError ? "error" : "check_circle";
+
+    private System.Threading.Timer? _timer;
+
+    private string ToastClasses => _isError
+        ? "bg-error-container text-on-error-container border-error/20"
+        : "bg-surface-container-lowest text-on-surface border-outline-variant/40";
+
+    public void Show(ProblemDetails problem)
+    {
+        _isError = true;
+        _title   = problem.Title  ?? "An error occurred";
+        _detail  = problem.Detail;
+        _code    = problem.Code;
+        Open();
+    }
+
+    public void ShowSuccess(string message, string? detail = null)
+    {
+        _isError = false;
+        _title   = message;
+        _detail  = detail;
+        _code    = null;
+        Open();
+    }
+
+    private void Open()
+    {
+        _visible = true;
+        StateHasChanged();
+        _timer?.Dispose();
+        _timer = new System.Threading.Timer(
+            _ => InvokeAsync(Dismiss),
+            null,
+            TimeSpan.FromSeconds(5),
+            Timeout.InfiniteTimeSpan);
+    }
+
+    private void Dismiss()
+    {
+        _visible = false;
+        StateHasChanged();
+    }
+
+    public void Dispose() => _timer?.Dispose();
+}

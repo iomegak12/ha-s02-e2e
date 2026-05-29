@@ -1,0 +1,13 @@
+@* Centered empty-state illustration for stub pages and zero-data states *@
+
+<div class="flex flex-col items-center justify-center h-64 text-center px-8">
+    <span class="material-symbols-outlined text-[48px] text-outline mb-4">@Icon</span>
+    <h3 class="font-headline-md text-headline-md text-on-surface mb-2">@Title</h3>
+    <p class="font-body-base text-body-base text-on-surface-variant max-w-sm">@Message</p>
+</div>
+
+@code {
+    [Parameter] public string Icon    { get; set; } = "inbox";
+    [Parameter] public string Title   { get; set; } = "Nothing here yet";
+    [Parameter] public string Message { get; set; } = "This section is coming soon.";
+}

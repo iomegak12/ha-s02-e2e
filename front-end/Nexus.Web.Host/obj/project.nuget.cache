@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "dgSpecHash": "SNLUoeZJ6Oo=",
+  "success": true,
+  "projectFilePath": "C:\\000 - HA - S02\\e2e\\front-end\\Nexus.Web.Host\\Nexus.Web.Host.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\LENOVO\\.nuget\\packages\\microsoft.aspnetcore.components.webassembly\\10.0.0\\microsoft.aspnetcore.components.webassembly.10.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\microsoft.aspnetcore.components.webassembly.server\\10.0.0\\microsoft.aspnetcore.components.webassembly.server.10.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\microsoft.extensions.dependencymodel\\9.0.0\\microsoft.extensions.dependencymodel.9.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\microsoft.jsinterop.webassembly\\10.0.0\\microsoft.jsinterop.webassembly.10.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\serilog\\4.2.0\\serilog.4.2.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\serilog.aspnetcore\\9.0.0\\serilog.aspnetcore.9.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\serilog.extensions.hosting\\9.0.0\\serilog.extensions.hosting.9.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\serilog.extensions.logging\\9.0.0\\serilog.extensions.logging.9.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\serilog.formatting.compact\\3.0.0\\serilog.formatting.compact.3.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\serilog.settings.configuration\\9.0.0\\serilog.settings.configuration.9.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\serilog.sinks.console\\6.0.0\\serilog.sinks.console.6.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\serilog.sinks.debug\\3.0.0\\serilog.sinks.debug.3.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\serilog.sinks.file\\6.0.0\\serilog.sinks.file.6.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

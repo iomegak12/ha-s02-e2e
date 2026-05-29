@@ -1,0 +1,17 @@
+@page "/"
+@page "/dashboard"
+@attribute [Authorize]
+
+<PageTitle>Dashboard — Nexus HA</PageTitle>
+
+<header class="h-20 px-margin-page flex items-center justify-between bg-surface-bg sticky top-0 z-10 backdrop-blur-sm bg-opacity-90">
+    <div>
+        <h1 class="font-display-lg text-display-lg text-on-surface">Dashboard</h1>
+        <p class="text-on-surface-variant mt-1">Clinical operations overview</p>
+    </div>
+</header>
+
+<div class="p-margin-page">
+    <EmptyState Icon="dashboard" Title="Dashboard coming soon"
+                Message="Live KPIs and operational metrics will be wired up in Phase 6." />
+</div>

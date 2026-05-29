@@ -1,0 +1,25 @@
+@inherits LayoutComponentBase
+
+<div class="bg-surface-bg text-on-surface font-sans text-body-base antialiased selection:bg-primary-fixed selection:text-on-primary-fixed h-screen overflow-hidden flex flex-col">
+
+    <!-- Top navigation bar -->
+    <TopBar IsCollapsed="@_isCollapsed" OnToggle="@ToggleSidebar" />
+
+    <!-- Content: sidebar + page body -->
+    <div class="flex flex-1 overflow-hidden">
+        <NavMenu IsCollapsed="@_isCollapsed" />
+        <main class="flex-1 flex flex-col h-full overflow-y-auto">
+            @Body
+        </main>
+    </div>
+
+</div>
+
+<Toast @ref="_toast" />
+
+@code {
+    private bool _isCollapsed = true;   // collapsed by default
+    private Toast _toast = default!;
+
+    private void ToggleSidebar() => _isCollapsed = !_isCollapsed;
+}

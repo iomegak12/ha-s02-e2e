@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login | Nexus HA Clinical Admin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#c9e6ff",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "inverse-on-surface": "#ebf1ff",
+                    "on-tertiary": "#ffffff",
+                    "status-verified": "#6366F1",
+                    "primary": "#3525cd",
+                    "surface-dim": "#d3daea",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-container": "#5e6061",
+                    "on-primary-container": "#dad7ff",
+                    "inverse-surface": "#2a313d",
+                    "on-secondary-container": "#004666",
+                    "secondary": "#006591",
+                    "outline": "#777587",
+                    "tertiary": "#46494a",
+                    "inverse-primary": "#c3c0ff",
+                    "status-archived": "#374151",
+                    "surface": "#f9f9ff",
+                    "surface-container-high": "#e2e8f8",
+                    "primary-fixed": "#e2dfff",
+                    "surface-card": "#FFFFFF",
+                    "secondary-container": "#39b8fd",
+                    "primary-container": "#4f46e5",
+                    "on-tertiary-fixed": "#191c1d",
+                    "on-background": "#151c27",
+                    "tertiary-fixed-dim": "#c5c7c8",
+                    "on-primary-fixed": "#0f0069",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed-dim": "#89ceff",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f0f3ff",
+                    "on-secondary-fixed-variant": "#004c6e",
+                    "status-active": "#10B981",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed": "#e1e3e4",
+                    "surface-container": "#e7eefe",
+                    "background": "#f9f9ff",
+                    "on-surface": "#151c27",
+                    "surface-variant": "#dce2f3",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "surface-tint": "#4d44e3",
+                    "status-error": "#EF4444",
+                    "on-tertiary-container": "#dadbdc",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "on-surface-variant": "#464555",
+                    "on-tertiary-fixed-variant": "#454748",
+                    "surface-bright": "#f9f9ff",
+                    "status-pending": "#F59E0B",
+                    "surface-container-highest": "#dce2f3",
+                    "surface-bg": "#F3F4F6",
+                    "outline-variant": "#c7c4d8",
+                    "on-secondary-fixed": "#001e2f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "padding-card": "20px",
+                    "margin-page": "24px",
+                    "stack-sm": "4px",
+                    "stack-md": "12px",
+                    "sidebar-width": "240px",
+                    "stack-lg": "24px",
+                    "gutter-grid": "16px"
+            },
+            "fontFamily": {
+                    "code-mono": ["JetBrains Mono"],
+                    "display-lg": ["Roboto"],
+                    "headline-md": ["Roboto"],
+                    "label-bold": ["Roboto"],
+                    "body-base": ["Roboto"],
+                    "body-sm": ["Roboto"]
+            },
+            "fontSize": {
+                    "code-mono": ["11px", {"lineHeight": "16px", "fontWeight": "400"}],
+                    "display-lg": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                    "label-bold": ["12px", {"lineHeight": "16px", "fontWeight": "700"}],
+                    "body-base": ["12px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "body-sm": ["11px", {"lineHeight": "16px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .carousel-item {
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+            position: absolute;
+            inset: 0;
+        }
+        .carousel-item.active {
+            opacity: 1;
+            z-index: 10;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-overlay {
+            background: linear-gradient(to right, rgba(53, 37, 205, 0.4), rgba(53, 37, 205, 0.1));
+            backdrop-filter: blur(2px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-base text-body-base overflow-hidden">
+<main class="flex min-h-screen">
+<!-- Left Side: Login Form (40%) -->
+<section class="w-full md:w-[40%] bg-surface flex flex-col justify-center px-12 lg:px-24 xl:px-32 z-20">
+<div class="mb-12">
+<div class="flex items-center gap-2 mb-8">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-2xl" style="font-variation-settings: 'FILL' 1;">medical_services</span>
+</div>
+<span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">Nexus HA</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface mb-2">Welcome Back</h1>
+<p class="font-body-base text-body-base text-on-surface-variant">Sign in to access your clinical dashboard</p>
+</div>
+<form class="space-y-6" onsubmit="event.preventDefault();">
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface-variant mb-2" for="email">Username/Email</label>
+<input class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-outline/50" id="email" name="email" placeholder="admin@nexusha.com" type="email"/>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<label class="block font-label-bold text-label-bold text-on-surface-variant" for="password">Password</label>
+<a class="font-label-bold text-label-bold text-primary hover:underline" href="#">Forgot password?</a>
+</div>
+<input class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-outline/50" id="password" name="password" placeholder="••••••••" type="password"/>
+</div>
+<div class="flex items-center">
+<input class="w-4 h-4 text-primary border-outline-variant rounded focus:ring-primary" id="remember" type="checkbox"/>
+<label class="ml-2 font-body-base text-body-base text-on-surface-variant select-none" for="remember">Remember Me</label>
+</div>
+<button class="w-full bg-primary hover:bg-primary/90 text-on-primary font-medium py-3 rounded-lg transition-all active:scale-[0.98] shadow-md" type="submit">
+                    Sign In
+                </button>
+</form>
+<footer class="mt-24 pt-8 border-t border-outline-variant">
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                    © 2024 Nexus HA Clinical Admin. All rights reserved.<br/>
+                    Secured by HealthAsyst® Digital Engineering.
+                </p>
+</footer>
+</section>
+<!-- Right Side: Clinical Carousel (60%) -->
+<section class="hidden md:block md:w-[60%] relative overflow-hidden bg-primary-container">
+<!-- Carousel Container -->
+<div class="h-full w-full relative" id="hero-carousel">
+<!-- Slide 1 -->
+<div class="carousel-item active bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuClFXTM8AWuL5RaqeT0QZqDhxqomlwlCjsWd9oxD2z8KFu2E4DRFrp9ko3v--q1T74izWEWF9dBhf2B0uLt8xFimAGgmrHp4n3Pn2yagS-oYC_DIoaQMdBrsi8EvVG_zD3LLtDbpE7OzmLpNoNMa9PeZXQ3Ek3qSvMtynqy2NOlXBiN0HxbVuKuempMPjeQo4oOfLp8iUY9Dz5VOUsp4jtumFSpjjHZvf5XiBm_bqudiKTVSkljiu8KtAH2xR10vYo90vJ8WlPw0hYp');">
+<div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+<div class="absolute inset-0 glass-overlay"></div>
+<div class="absolute bottom-32 left-16 right-16 z-20">
+<h2 class="font-display-lg text-[40px] leading-tight text-white font-bold mb-4 max-w-lg">Reimagine Patient Engagement</h2>
+<p class="text-white/90 text-lg max-w-md">Empowering staff with digital tools for seamless intake and workflows.</p>
+</div>
+</div>
+<!-- Slide 2 -->
+<div class="carousel-item bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAHOwzk3V8Pu-6aPjHZcOBKiov1s8ayPXwpB9Z5GTMDVUk--k9OjTQVQex_j95PfHCwS3H3nD9Wt208TuPbiftEEQhRytSBIJfr2f9rAEoHzBXyuQFDabTyKrFiGpAYBgiIQ4OqfIspA1oBYXVaWAoD0sdl6FQ6WCz4fT1G1Kya3djtPD3ts13THpVYALIxVUg_LbgTyEYG5fPAojyL1FrTrF4pxxpFMNP_ly6_wmlSTs2AkWzhHDNoITjp5Kizwh_saQUWKi1dSdAz');">
+<div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+<div class="absolute inset-0 glass-overlay"></div>
+<div class="absolute bottom-32 left-16 right-16 z-20">
+<h2 class="font-display-lg text-[40px] leading-tight text-white font-bold mb-4 max-w-lg">Future-ready Healthcare Technology</h2>
+<p class="text-white/90 text-lg max-w-md">Crafting digital engineering and transformation solutions for modern clinics.</p>
+</div>
+</div>
+<!-- Slide 3 -->
+<div class="carousel-item bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBRZUg6FvmerIpvBpNtYHi2mwSHK0BGbqInT40IOgnXBQLOf-D86aSF6ws0JW2ihPjOoETofPsHH40M38-9DGqyaupHNQdyCxxpnEUwjY-vWGv15CyWqE-Ple1LIP6UrvDgMcLGdcQWnXWM_1doxGTpKXOadGEXJqL62VePGXXPo1_Rq9sKDTtmruTtA6oTFTPpByCDZGqNtRqFl_fuuQwC4U8Pffm4ruTplMTwvMyygZESTvudzFZlEYQJ44Cx3Q0e-3013vdFGeAu');">
+<div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+<div class="absolute inset-0 glass-overlay"></div>
+<div class="absolute bottom-32 left-16 right-16 z-20">
+<h2 class="font-display-lg text-[40px] leading-tight text-white font-bold mb-4 max-w-lg">CheckinAsyst® Automation</h2>
+<p class="text-white/90 text-lg max-w-md">Automate patient intake, payments, and communication with ease.</p>
+</div>
+</div>
+<!-- Slide 4 -->
+<div class="carousel-item bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCvABNoFGgwSYPlv4BqG-CE-Z6TB37VY9D8nxHbexVHLXNMnQ5DCRDBG6MIU6eUVYCa5ouTJ98tex8yT_8tbL_z_E2X41qgJsijhQs4WOP1egUZRqben0lsuPn5zgZHjZSsRDEdzhq4b1ZYRCcSA6-fOHMsr7BbG2rpOYz39gFiTkniG1noaic-3oZzhmoJlzV9WTQHQ2RV2diPtcjuy5sQOl6Vq50Is3MRgzDoyHIrBXjoDCAMozIuPWB7cB7ldJW6rcRON8FLzLM1');">
+<div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+<div class="absolute inset-0 glass-overlay"></div>
+<div class="absolute bottom-32 left-16 right-16 z-20">
+<h2 class="font-display-lg text-[40px] leading-tight text-white font-bold mb-4 max-w-lg">Great Place to Work-Certified</h2>
+<p class="text-white/90 text-lg max-w-md">Proudly recognized for our culture of excellence in healthcare innovation.</p>
+</div>
+</div>
+</div>
+<!-- Carousel Controls -->
+<div class="absolute bottom-16 left-16 flex gap-3 z-30">
+<button class="nav-dot w-3 h-3 rounded-full bg-white opacity-100 transition-all" onclick="changeSlide(0)"></button>
+<button class="nav-dot w-3 h-3 rounded-full bg-white opacity-30 hover:opacity-100 transition-all" onclick="changeSlide(1)"></button>
+<button class="nav-dot w-3 h-3 rounded-full bg-white opacity-30 hover:opacity-100 transition-all" onclick="changeSlide(2)"></button>
+<button class="nav-dot w-3 h-3 rounded-full bg-white opacity-30 hover:opacity-100 transition-all" onclick="changeSlide(3)"></button>
+</div>
+<!-- Background Decorative Element -->
+<div class="absolute -top-24 -right-24 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
+</section>
+</main>
+<script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.carousel-item');
+        const dots = document.querySelectorAll('.nav-dot');
+        const totalSlides = slides.length;
+
+        function changeSlide(index) {
+            slides[currentSlide].classList.remove('active');
+            dots[currentSlide].classList.replace('opacity-100', 'opacity-30');
+            
+            currentSlide = index;
+            
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.replace('opacity-30', 'opacity-100');
+        }
+
+        function nextSlide() {
+            let next = (currentSlide + 1) % totalSlides;
+            changeSlide(next);
+        }
+
+        // Auto play
+        setInterval(nextSlide, 5000);
+    </script>
+</body></html>

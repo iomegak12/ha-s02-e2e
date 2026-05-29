@@ -1,26 +1,29 @@
-# Nexus HA — local development stack
+# Nexus HA — local development stack (with build)
 #
-# Brings up: SQL Server 2022, the two implemented .NET services
-# (Identity + Audit), and an observability bundle (OTel Collector,
-# Prometheus, Loki, Tempo, Grafana).
+# Builds all service images locally and tags them as iomega/*:latest.
+# Includes full observability stack (OTel Collector, Prometheus, Loki, Tempo, Grafana).
 #
-# Add other services (nexus-bff, nexus-branches, nexus-doctors, nexus-patients)
-# as they come online.
+# Prerequisites:
+#   cp .env.example .env   # then fill in real secrets
 #
 # Quick start:
-#   cp .env.example .env
 #   docker compose up -d
-#   open http://localhost:3000        # Grafana (admin / admin)
-#   open http://localhost:8000/swagger # Identity
-#   open http://localhost:12000/swagger # Audit
 #
-# Tear down (preserving SQL data):  docker compose down
-# Tear down + wipe volumes:         docker compose down -v
+# Useful URLs (once running):
+#   http://localhost:3000          Grafana        (admin / see .env)
+#   http://localhost:8000/swagger  Identity API
+#   http://localhost:9000/swagger  Patient API
+#   http://localhost:10000/swagger Doctor API
+#   http://localhost:11000/swagger Branch API
+#   http://localhost:12000/swagger Audit API
+#
+# Tear down (preserve volumes):  docker compose down
+# Tear down + wipe volumes:      docker compose down -v
 
 name: nexus-ha
 
 networks:
-  nexus:
+  nexus-ha-network:
     driver: bridge
 
 volumes:
@@ -40,7 +43,7 @@ services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: nexus-sqlserver
-    networks: [nexus]
+    networks: [nexus-ha-network]
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
@@ -65,7 +68,7 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.111.0
     container_name: nexus-otel-collector
-    networks: [nexus]
+    networks: [nexus-ha-network]
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
       - ./observability/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
@@ -82,7 +85,7 @@ services:
   prometheus:
     image: prom/prometheus:v2.55.0
     container_name: nexus-prometheus
-    networks: [nexus]
+    networks: [nexus-ha-network]
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -98,7 +101,7 @@ services:
   loki:
     image: grafana/loki:3.2.1
     container_name: nexus-loki
-    networks: [nexus]
+    networks: [nexus-ha-network]
     command: ["-config.file=/etc/loki/loki-config.yaml"]
     volumes:
       - ./observability/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
@@ -109,7 +112,7 @@ services:
   tempo:
     image: grafana/tempo:2.6.1
     container_name: nexus-tempo
-    networks: [nexus]
+    networks: [nexus-ha-network]
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
       - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
@@ -120,10 +123,10 @@ services:
   grafana:
     image: grafana/grafana:11.3.0
     container_name: nexus-grafana
-    networks: [nexus]
+    networks: [nexus-ha-network]
     environment:
       GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
-      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in .env}"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_USERS_DEFAULT_THEME: "dark"
       GF_FEATURE_TOGGLES_ENABLE: "traceqlEditor traceToProfiles"
@@ -149,14 +152,14 @@ services:
     build:
       context: ./nexus-identity-service
       dockerfile: Dockerfile
-    image: nexus-identity-service:dev
+    image: iomega/nexus-identity-service:latest
     container_name: nexus-identity-service
-    networks: [nexus]
+    networks: [nexus-ha-network]
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8000"
       ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusIdentity;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
-      Persistence__AutoMigrate: "true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-true}"
       Persistence__FailFast: "false"
       Observability__Otlp__Endpoint: "http://otel-collector:4317"
       Observability__Otlp__Protocol: "Grpc"
@@ -176,14 +179,14 @@ services:
     build:
       context: ./nexus-audit-service
       dockerfile: Dockerfile
-    image: nexus-audit-service:dev
+    image: iomega/nexus-audit-service:latest
     container_name: nexus-audit-service
-    networks: [nexus]
+    networks: [nexus-ha-network]
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:12000"
       ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusAudit;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
-      Persistence__AutoMigrate: "true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-true}"
       Persistence__FailFast: "false"
       Auth__Authority: "http://nexus-identity-service:8000"
       Auth__Audience: "nexus-ha"
@@ -205,14 +208,14 @@ services:
     build:
       context: ./nexus-branch-service
       dockerfile: Dockerfile
-    image: nexus-branch-service:dev
+    image: iomega/nexus-branch-service:latest
     container_name: nexus-branch-service
-    networks: [nexus]
+    networks: [nexus-ha-network]
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:11000"
       ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusBranches;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
-      Persistence__AutoMigrate: "true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-true}"
       Persistence__FailFast: "false"
       Auth__Authority: "http://nexus-identity-service:8000"
       Auth__Audience: "nexus-ha"
@@ -239,14 +242,14 @@ services:
     build:
       context: ./nexus-patient-service
       dockerfile: Dockerfile
-    image: nexus-patient-service:dev
+    image: iomega/nexus-patient-service:latest
     container_name: nexus-patient-service
-    networks: [nexus]
+    networks: [nexus-ha-network]
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:9000"
       ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusPatients;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
-      Persistence__AutoMigrate: "true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-true}"
       Persistence__FailFast: "false"
       Auth__Authority: "http://nexus-identity-service:8000"
       Auth__Audience: "nexus-ha"
@@ -279,14 +282,14 @@ services:
     build:
       context: ./nexus-doctor-service
       dockerfile: Dockerfile
-    image: nexus-doctor-service:dev
+    image: iomega/nexus-doctor-service:latest
     container_name: nexus-doctor-service
-    networks: [nexus]
+    networks: [nexus-ha-network]
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:10000"
       ConnectionStrings__Default: "Server=sqlserver,1433;Database=NexusDoctors;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=true"
-      Persistence__AutoMigrate: "true"
+      Persistence__AutoMigrate: "${PERSISTENCE_AUTO_MIGRATE:-true}"
       Persistence__FailFast: "false"
       Auth__Authority: "http://nexus-identity-service:8000"
       Auth__Audience: "nexus-ha"

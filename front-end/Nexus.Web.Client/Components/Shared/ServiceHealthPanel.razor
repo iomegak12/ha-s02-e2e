@@ -1,0 +1,161 @@
+@inject IServiceHealthService HealthService
+@implements IAsyncDisposable
+
+<div class="relative">
+
+    <!-- Health indicator button -->
+    <button @onclick="ToggleDropdown"
+            class="relative p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors"
+            title="Service Health">
+        <span class="material-symbols-outlined text-[20px]">monitor_heart</span>
+        <!-- Aggregate status dot -->
+        <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full border border-surface @OverallDotClass"></span>
+    </button>
+
+    @if (_showDropdown)
+    {
+        <!-- Click-outside backdrop -->
+        <div class="fixed inset-0 z-40" @onclick="CloseDropdown"></div>
+
+        <!-- Dropdown panel -->
+        <div class="absolute right-0 top-full mt-1 w-64 bg-surface-card border border-outline-variant rounded-lg shadow-lg z-50">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/30">
+                <span class="font-label-bold text-label-bold text-on-surface">Service Health</span>
+                <button @onclick="RefreshAsync"
+                        class="p-1 rounded text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors"
+                        title="Refresh">
+                    <span class="material-symbols-outlined text-[16px] @(_loading ? "animate-spin" : "")">refresh</span>
+                </button>
+            </div>
+
+            <!-- Service list -->
+            <div class="px-3 py-2 space-y-0.5">
+                @if (_statuses.Count == 0 && _loading)
+                {
+                    <div class="flex justify-center py-4">
+                        <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                }
+                else if (_statuses.Count == 0)
+                {
+                    <div class="flex items-center gap-2 py-3 text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[16px]">wifi_off</span>
+                        <span class="font-body-sm text-body-sm">Unable to reach services</span>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var svc in _statuses)
+                    {
+                        <div class="flex items-center justify-between px-1 py-2 rounded-lg hover:bg-surface-container-low transition-colors">
+                            <div class="flex items-center gap-2.5">
+                                <span class="material-symbols-outlined text-[16px] text-on-surface-variant">@ServiceIcon(svc.Service)</span>
+                                <span class="font-body-base text-body-base text-on-surface">@svc.Service</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full @StatusDotClass(svc.Status)"></span>
+                                <span class="font-body-sm text-body-sm @StatusTextClass(svc.Status) capitalize">@svc.Status</span>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Footer: last checked timestamp -->
+            @if (_lastChecked.HasValue)
+            {
+                <div class="px-4 py-2 border-t border-outline-variant/30">
+                    <span class="font-body-sm text-body-sm text-on-surface-variant">
+                        Checked at @_lastChecked.Value.ToString("HH:mm:ss")
+                    </span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool _showDropdown;
+    private bool _loading = true;
+    private List<ServiceHealthStatus> _statuses = [];
+    private DateTime? _lastChecked;
+    private System.Threading.Timer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+
+        // Auto-refresh every 30 seconds
+        _timer = new System.Threading.Timer(
+            async _ => await InvokeAsync(async () =>
+            {
+                await LoadAsync();
+                StateHasChanged();
+            }),
+            null,
+            TimeSpan.FromSeconds(30),
+            TimeSpan.FromSeconds(30));
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _statuses = await HealthService.GetStatusAsync();
+        _lastChecked = DateTime.Now;
+        _loading = false;
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadAsync();
+    }
+
+    private void ToggleDropdown() => _showDropdown = !_showDropdown;
+    private void CloseDropdown() => _showDropdown = false;
+
+    private string OverallDotClass
+    {
+        get
+        {
+            if (_loading && _statuses.Count == 0) return "bg-outline";
+            if (_statuses.Count == 0)              return "bg-outline";
+            if (_statuses.Any(s => s.Status == "offline"))  return "bg-error";
+            if (_statuses.Any(s => s.Status == "degraded")) return "bg-warning";
+            return "bg-status-active";
+        }
+    }
+
+    private static string StatusDotClass(string status) => status switch
+    {
+        "healthy"  => "bg-status-active",
+        "degraded" => "bg-warning",
+        "offline"  => "bg-error",
+        _          => "bg-outline"
+    };
+
+    private static string StatusTextClass(string status) => status switch
+    {
+        "healthy"  => "text-status-active",
+        "degraded" => "text-warning",
+        "offline"  => "text-error",
+        _          => "text-on-surface-variant"
+    };
+
+    private static string ServiceIcon(string service) => service switch
+    {
+        "Identity" => "fingerprint",
+        "Patients" => "group",
+        "Doctors"  => "stethoscope",
+        "Branches" => "account_tree",
+        "Audit"    => "history_edu",
+        _          => "cloud"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_timer is not null)
+            await _timer.DisposeAsync();
+    }
+}

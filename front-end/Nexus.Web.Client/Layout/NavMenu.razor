@@ -1,0 +1,146 @@
+@inject NavigationManager Nav
+@inject SessionState Session
+
+@* Sidebar — collapses to icon-only (64px); no scrollbar *@
+<aside class="@(IsCollapsed ? "w-sidebar-width-collapsed" : "w-sidebar-width") bg-surface border-r border-outline-variant flex flex-col h-full overflow-hidden flex-shrink-0 transition-all duration-200 z-20">
+
+    <!-- Nav links -->
+    <nav class="flex-1 px-2 pt-3 space-y-0.5 overflow-hidden">
+
+        <NavLink href="/"
+                 Match="NavLinkMatch.All"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="Home">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/")">home</span>
+            @if (!IsCollapsed) { <span class="truncate">Home</span> }
+        </NavLink>
+
+        <NavLink href="/dashboard"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="Dashboard">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/dashboard")">dashboard</span>
+            @if (!IsCollapsed) { <span class="truncate">Dashboard</span> }
+        </NavLink>
+
+        <NavLink href="/patients"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="Patients">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/patients")">group</span>
+            @if (!IsCollapsed) { <span class="truncate">Patients</span> }
+        </NavLink>
+
+        <NavLink href="/doctors"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="Doctors">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/doctors")">medical_services</span>
+            @if (!IsCollapsed) { <span class="truncate">Doctors</span> }
+        </NavLink>
+
+        <NavLink href="/branches"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="Branches">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/branches")">account_tree</span>
+            @if (!IsCollapsed) { <span class="truncate">Branches</span> }
+        </NavLink>
+
+        <NavLink href="/audit"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="Audit Logs">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/audit")">history_edu</span>
+            @if (!IsCollapsed) { <span class="truncate">Audit Logs</span> }
+        </NavLink>
+
+        <!-- Divider -->
+        <div class="@(IsCollapsed ? "h-px bg-outline-variant my-3 mx-2" : "h-px bg-outline-variant my-3 mx-4")"></div>
+
+        <NavLink href="/news"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="News">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/news")">newspaper</span>
+            @if (!IsCollapsed) { <span class="truncate">News</span> }
+        </NavLink>
+
+        <NavLink href="/terms"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="Terms">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/terms")">description</span>
+            @if (!IsCollapsed) { <span class="truncate">Terms</span> }
+        </NavLink>
+
+        <NavLink href="/support"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="Support">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/support")">contact_support</span>
+            @if (!IsCollapsed) { <span class="truncate">Support</span> }
+        </NavLink>
+
+        <NavLink href="/settings"
+                 class="@NavLinkBase"
+                 ActiveClass="bg-primary-container text-on-primary-container font-bold"
+                 title="Settings">
+            <span class="material-symbols-outlined text-[20px] flex-shrink-0"
+                  style="@FillStyle("/settings")">settings</span>
+            @if (!IsCollapsed) { <span class="truncate">Settings</span> }
+        </NavLink>
+
+    </nav>
+
+    <!-- Footer: compact user identity chip -->
+    <div class="flex-shrink-0 p-2 border-t border-outline-variant/30">
+        @if (IsCollapsed)
+        {
+            <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs select-none mx-auto"
+                 title="@(Session.Current?.Username ?? "")">
+                @Initials
+            </div>
+        }
+        else
+        {
+            <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30">
+                <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs select-none flex-shrink-0">
+                    @Initials
+                </div>
+                <div class="flex flex-col min-w-0">
+                    <span class="font-label-bold text-label-bold text-on-surface truncate">@(Session.Current?.Username ?? "")</span>
+                    <span class="font-body-sm text-body-sm text-on-surface-variant">@(Session.Current?.Role ?? "Admin")</span>
+                </div>
+            </div>
+        }
+    </div>
+
+</aside>
+
+@code {
+    [Parameter, EditorRequired] public bool IsCollapsed { get; set; }
+
+    private string NavLinkBase => IsCollapsed
+        ? "flex items-center justify-center w-full p-2.5 rounded-lg cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all"
+        : "flex items-center gap-3 px-4 py-2.5 w-full cursor-pointer text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg";
+
+    private string Initials => Session.Current?.Username is { Length: > 0 } u
+        ? u[..1].ToUpperInvariant()
+        : "A";
+
+    private string FillStyle(string path) =>
+        Nav.ToBaseRelativePath(Nav.Uri).TrimStart('/').Equals(path.TrimStart('/'), StringComparison.OrdinalIgnoreCase)
+            ? "font-variation-settings: 'FILL' 1;"
+            : "font-variation-settings: 'FILL' 0;";
+}

@@ -1,0 +1,10 @@
+@* Thin component whose sole job is to redirect unauthenticated users to /login *@
+@inject NavigationManager Nav
+
+@code {
+    protected override void OnInitialized()
+    {
+        var returnUrl = Uri.EscapeDataString(Nav.ToBaseRelativePath(Nav.Uri));
+        Nav.NavigateTo($"/login?returnUrl={returnUrl}", forceLoad: false);
+    }
+}
