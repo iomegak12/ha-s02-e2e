@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Nexus.Web.Host")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cf683bde7a9483700d203ce3fabaac11a7b97693")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1f2cf98bb1585a259d85bbcc546b85e9eadb3101")]
 [assembly: System.Reflection.AssemblyProductAttribute("Nexus.Web.Host")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Nexus.Web.Host")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
